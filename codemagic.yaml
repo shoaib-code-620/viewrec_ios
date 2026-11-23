@@ -1,0 +1,56 @@
+# Codemagic (https://codemagic.io) builds Flutter apps on cloud Macs, with a free monthly allowance.
+# Connect this project's Git repository in Codemagic, pick this file, and press "Start new build".
+#
+# ios-check     : works with no Apple account. Proves the iOS app compiles.
+# ios-testflight: builds a signed app and sends it to TestFlight so you can install it on iPhones.
+#                 Needs the Apple Developer Program (about $99/year). See IOS_BUILD.md for the setup.
+workflows:
+  ios-check:
+    name: iOS compile check
+    instance_type: mac_mini_m2
+    max_build_duration: 40
+    environment:
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+    scripts:
+      - name: Get packages
+        script: flutter pub get
+      - name: Analyze
+        script: flutter analyze --no-fatal-infos
+      - name: Layout tests
+        script: flutter test
+      - name: Build iOS without signing
+        script: flutter build ios --release --no-codesign
+    artifacts:
+      - build/ios/iphoneos/Runner.app
+
+  ios-testflight:
+    name: iOS to TestFlight
+    instance_type: mac_mini_m2
+    max_build_duration: 60
+    integrations:
+      app_store_connect: ViewRec-AppStoreConnect   # create this key in Codemagic -> Teams -> Integrations
+    environment:
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.viewrec.viewrec
+    scripts:
+      - name: Get packages
+        script: flutter pub get
+      - name: Set up signing
+        script: xcode-project use-profiles
+      - name: Build IPA
+        script: |
+          flutter build ipa --release \
+            --build-number=$(($(app-store-connect get-latest-testflight-build-number "com.viewrec.viewrec" 2>/dev/null || echo 0) + 1)) \
+            --export-options-plist=/Users/builder/export_options.plist
+    artifacts:
+      - build/ios/ipa/*.ipa
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true

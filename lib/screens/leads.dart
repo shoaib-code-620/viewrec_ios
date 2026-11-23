@@ -1,0 +1,140 @@
+import 'package:flutter/material.dart';
+import '../async_view.dart';
+import 'lead_thread.dart';
+import '../models.dart';
+import '../repo.dart';
+import '../theme.dart';
+import '../widgets.dart';
+
+class LeadsScreen extends StatelessWidget {
+  const LeadsScreen({super.key});
+  @override
+  Widget build(BuildContext context) => AsyncView<List<Lead>>(
+        load: repo.leads,
+        builder: (context, leads, refresh) => _LeadsBody(leads: leads, refresh: refresh),
+      );
+}
+
+class _LeadsBody extends StatefulWidget {
+  final List<Lead> leads;
+  final Future<void> Function() refresh;
+  const _LeadsBody({required this.leads, required this.refresh});
+  @override
+  State<_LeadsBody> createState() => _LeadsBodyState();
+}
+
+class _LeadsBodyState extends State<_LeadsBody> {
+  late final List<Lead> leads = widget.leads;
+  int tab = 0;
+  static const tabs = ['All', 'New', 'Contacted', 'Won', 'Lost'];
+
+  Color _c(String s) => switch (s) { 'new' => C.amber, 'contacted' => C.blue, 'won' => C.green, _ => C.muted };
+
+  Future<void> _setStatus(Lead l, String s) async {
+    final prev = l.status;
+    setState(() => l.status = s);
+    try {
+      await repo.setLeadStatus(l.id, s);
+    } catch (e) {
+      if (mounted) {
+        setState(() => l.status = prev);
+        showMsg(context, "Couldn't update the lead. Try again.");
+      }
+    }
+  }
+
+  void _open(Lead l) => showSheet(
+        context,
+        StatefulBuilder(
+          builder: (ctx, set) => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(children: [
+              Avatar(l.name, size: 46),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(l.name, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+                  Muted('${l.service} · via ${l.source}', size: 13),
+                ]),
+              ),
+            ]),
+            const SizedBox(height: 14),
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(color: C.surface2, borderRadius: BorderRadius.circular(rMd)),
+              child: Text(l.message, style: const TextStyle(height: 1.45)),
+            ),
+            const SizedBox(height: 14),
+            Row(children: [
+              Expanded(child: AppButton('Call', icon: Icons.call_rounded, small: true, onTap: () => Navigator.pop(ctx))),
+              const SizedBox(width: 8),
+              Expanded(child: AppButton('Reply', icon: Icons.reply_rounded, small: true, style: BtnStyle.ghost, onTap: () {
+                Navigator.pop(ctx);
+                Navigator.of(context).push(MaterialPageRoute(builder: (_) => LeadThreadScreen(lead: l))).then((_) {
+                  if (mounted) setState(() {});
+                });
+              })),
+            ]),
+            const SizedBox(height: 14),
+            Text('Mark as', style: TextStyle(color: C.muted, fontSize: 13, fontWeight: FontWeight.w600)),
+            const SizedBox(height: 8),
+            Wrap(runSpacing: 8, children: [
+              for (final s in const ['new', 'contacted', 'won', 'lost'])
+                AppChip(s[0].toUpperCase() + s.substring(1), active: l.status == s, onTap: () {
+                  _setStatus(l, s);
+                  set(() {});
+                }),
+            ]),
+          ]),
+        ),
+      );
+
+  @override
+  Widget build(BuildContext context) {
+    final shown = leads.where((l) => tab == 0 || l.status == tabs[tab].toLowerCase()).toList();
+    return RefreshIndicator(
+      onRefresh: widget.refresh,
+      child: AppPage(children: [
+        const Muted('Requests from your directory listing, review page and website. Reply fast to win the job.'),
+        const SizedBox(height: 14),
+        Row(children: [
+          Expanded(child: StatCard(icon: Icons.mark_email_unread_rounded, label: 'New', value: '${leads.where((l) => l.status == 'new').length}')),
+          const SizedBox(width: 12),
+          Expanded(child: StatCard(icon: Icons.emoji_events_rounded, label: 'Won', value: '${leads.where((l) => l.status == 'won').length}')),
+        ]),
+        const SizedBox(height: 16),
+        Pills(tabs, tab, (i) => setState(() => tab = i)),
+        const SizedBox(height: 12),
+        for (final l in shown)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: AppCard(
+              onTap: () => _open(l),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Row(children: [
+                  Avatar(l.name, size: 40),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text(l.name, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+                      Muted('${l.service} · ${l.when}', size: 12.5),
+                    ]),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                    decoration: BoxDecoration(color: _c(l.status).withValues(alpha: 0.15), borderRadius: BorderRadius.circular(999)),
+                    child: Text(l.status[0].toUpperCase() + l.status.substring(1), style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: _c(l.status))),
+                  ),
+                ]),
+                const SizedBox(height: 10),
+                Text(l.message, maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(color: C.muted, fontSize: 13.5, height: 1.4)),
+                const SizedBox(height: 8),
+                Row(children: [Icon(Icons.north_east_rounded, size: 13, color: C.primary), const SizedBox(width: 4), Text('via ${l.source}', style: TextStyle(fontSize: 12, color: C.primary))]),
+              ]),
+            ),
+          ),
+        if (shown.isEmpty) const EmptyState(Icons.handshake_rounded, 'No requests here', 'New requests show up as soon as they arrive.'),
+        const SizedBox(height: 80),
+      ]),
+    );
+  }
+}

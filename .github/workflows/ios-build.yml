@@ -1,0 +1,50 @@
+# Builds the iOS app on a GitHub-hosted Mac, so no Mac of your own is needed.
+#
+# Run it: push this project to GitHub, then Actions tab -> "iOS build" -> Run workflow
+# (it also runs on every push to main).
+#
+# What you get without an Apple Developer account: an UNSIGNED .ipa. It cannot be installed directly,
+# but a tool such as Sideloadly can sign it with your free Apple ID and put it on your own iPhone
+# (works for 7 days, then repeat). See IOS_BUILD.md.
+# For an installable build / TestFlight you need the Apple Developer Program - see IOS_BUILD.md.
+name: iOS build
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+jobs:
+  build-ios:
+    runs-on: macos-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Static analysis
+        run: flutter analyze --no-fatal-infos
+
+      - name: Layout tests (every screen, light and dark, large text)
+        run: flutter test
+
+      - name: Build iOS (no code signing)
+        run: flutter build ios --release --no-codesign
+
+      - name: Package an unsigned .ipa
+        run: |
+          mkdir -p Payload
+          cp -R build/ios/iphoneos/Runner.app Payload/
+          zip -qry ViewRec-unsigned.ipa Payload
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ViewRec-unsigned-ipa
+          path: ViewRec-unsigned.ipa
