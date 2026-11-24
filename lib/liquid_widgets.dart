@@ -243,7 +243,6 @@ class _LiquidPillsState extends State<LiquidPills> with SingleTickerProviderStat
   final GlobalKey _rowKey = GlobalKey();
   late final AnimationController _c = AnimationController(vsync: this, duration: const Duration(milliseconds: 750), value: 1);
   Rect? _from, _to;
-  int _shown = -1;
 
   @override
   void initState() {
@@ -272,7 +271,6 @@ class _LiquidPillsState extends State<LiquidPills> with SingleTickerProviderStat
     setState(() {
       _from = initial || _to == null ? r : _currentRect();
       _to = r;
-      _shown = widget.index;
     });
     if (initial || reduceMotion(context)) {
       _c.value = 1;

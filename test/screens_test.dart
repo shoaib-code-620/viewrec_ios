@@ -119,11 +119,9 @@ void main() {
               if (r is RenderFlex && r.hasSize) {
                 final horizontal = r.direction == Axis.horizontal;
                 var sum = 0.0;
-                var n = 0;
                 r.visitChildren((c) {
                   if (c is RenderBox && c.hasSize) {
                     sum += horizontal ? c.size.width : c.size.height;
-                    n++;
                   }
                 });
                 final avail = horizontal ? r.size.width : r.size.height;

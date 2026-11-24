@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../media_data.dart';
 import '../repo.dart';
-import '../theme.dart';
 import '../widgets.dart';
 import 'media_widgets.dart';
 
