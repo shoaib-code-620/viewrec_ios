@@ -7,6 +7,7 @@ import '../motion.dart';
 import '../repo.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import 'media_create.dart';
 import 'media_viewers.dart';
 import 'media_widgets.dart';
 
@@ -17,12 +18,62 @@ class MediaScreen extends StatelessWidget {
   Future<(List<StoryGroup>, List<Reel>)> _load() async => (await repo.stories(), await repo.reels());
 
   @override
-  Widget build(BuildContext context) => AsyncView<(List<StoryGroup>, List<Reel>)>(
-        load: _load,
-        builder: (context, data, refresh) => RefreshIndicator(
-          color: C.primary,
-          onRefresh: refresh,
-          child: _MediaBody(stories: data.$1, reels: data.$2),
+  Widget build(BuildContext context) => ValueListenableBuilder<int>(
+        valueListenable: mediaRevision,
+        // A new revision (something was posted) rebuilds the view, which reloads the feed.
+        builder: (context, rev, _) => AsyncView<(List<StoryGroup>, List<Reel>)>(
+          key: ValueKey(rev),
+          load: _load,
+          builder: (context, data, refresh) => RefreshIndicator(
+            color: C.primary,
+            onRefresh: refresh,
+            child: _MediaBody(stories: data.$1, reels: data.$2),
+          ),
+        ),
+      );
+}
+
+/// The row of story circles. Used on Home and Media; tapping one opens the story viewer.
+class StoriesRow extends StatefulWidget {
+  final List<StoryGroup> stories;
+  final EdgeInsets padding;
+  const StoriesRow({super.key, required this.stories, this.padding = EdgeInsets.zero});
+  @override
+  State<StoriesRow> createState() => _StoriesRowState();
+}
+
+class _StoriesRowState extends State<StoriesRow> {
+  void _openStory(StoryGroup g) {
+    if (g.mine && g.items.isEmpty) {
+      showCreateSheet(context);
+      return;
+    }
+    final playable = widget.stories.where((s) => s.items.isNotEmpty).toList();
+    final start = playable.indexOf(g);
+    Navigator.of(context).push(PageRouteBuilder(
+      opaque: true,
+      transitionDuration: const Duration(milliseconds: 380),
+      pageBuilder: (_, __, ___) => StoryViewer(groups: playable, startIndex: start < 0 ? 0 : start),
+      transitionsBuilder: (_, anim, __, child) => FadeTransition(opacity: anim, child: ScaleTransition(scale: Tween(begin: 0.92, end: 1.0).animate(CurvedAnimation(parent: anim, curve: Curves.easeOutCubic)), child: child)),
+    )).then((_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+        height: 112,
+        child: ListView.separated(
+          scrollDirection: Axis.horizontal,
+          physics: const BouncingScrollPhysics(),
+          padding: widget.padding,
+          clipBehavior: Clip.none,
+          itemCount: widget.stories.length,
+          separatorBuilder: (_, __) => const SizedBox(width: 8),
+          itemBuilder: (context, i) {
+            final g = widget.stories[i];
+            return StoryRing(name: g.business, seen: g.seen, mine: g.mine, onTap: () => _openStory(g)).reveal(context, i, 0.1);
+          },
         ),
       );
 }
@@ -44,21 +95,6 @@ class _MediaBodyState extends State<_MediaBody> {
     if (mounted) setState(() {});
   }
 
-  void _openStory(StoryGroup g) {
-    if (g.mine) {
-      showCreateSheet(context);
-      return;
-    }
-    final playable = widget.stories.where((s) => !s.mine && s.items.isNotEmpty).toList();
-    final start = playable.indexOf(g);
-    Navigator.of(context).push(PageRouteBuilder(
-      opaque: true,
-      transitionDuration: const Duration(milliseconds: 380),
-      pageBuilder: (_, __, ___) => StoryViewer(groups: playable, startIndex: start < 0 ? 0 : start),
-      transitionsBuilder: (_, anim, __, child) => FadeTransition(opacity: anim, child: ScaleTransition(scale: Tween(begin: 0.92, end: 1.0).animate(CurvedAnimation(parent: anim, curve: Curves.easeOutCubic)), child: child)),
-    )).then((_) => _refresh());
-  }
-
   void _openReel(List<Reel> list, Reel r) {
     Navigator.of(context).push(MaterialPageRoute(builder: (_) => ReelsViewer(reels: list, startIndex: list.indexOf(r), onChanged: _refresh))).then((_) => _refresh());
   }
@@ -67,34 +103,21 @@ class _MediaBodyState extends State<_MediaBody> {
   Widget build(BuildContext context) {
     final list = _visible;
     var n = 0;
-    return AppPage(reveal: false, children: [
-      SizedBox(
-        height: 112,
-        child: ListView.separated(
-          scrollDirection: Axis.horizontal,
-          physics: const BouncingScrollPhysics(),
-          clipBehavior: Clip.none,
-          itemCount: widget.stories.length,
-          separatorBuilder: (_, __) => const SizedBox(width: 8),
-          itemBuilder: (context, i) {
-            final g = widget.stories[i];
-            return StoryRing(name: g.business, seen: g.seen, mine: g.mine, onTap: () => _openStory(g)).reveal(context, i, 0.1);
-          },
-        ),
-      ),
+    return AppPage(reveal: false, hPad: 0, children: [
+      StoriesRow(stories: widget.stories, padding: const EdgeInsets.symmetric(horizontal: 18)),
       const SizedBox(height: 6),
-      LiquidPills(const ['For you', 'Following'], tab, (i) => setState(() => tab = i)).reveal(context, n++),
-      const SizedBox(height: 16),
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 18),
+        child: LiquidPills(const ['For you', 'Following'], tab, (i) => setState(() => tab = i)),
+      ).reveal(context, n++),
+      const SizedBox(height: 12),
       AnimatedSwitcher(
         duration: kMed,
         transitionBuilder: (c, a) => FadeTransition(opacity: a, child: SlideTransition(position: Tween(begin: const Offset(0, 0.02), end: Offset.zero).animate(a), child: c)),
         child: Column(key: ValueKey(tab), children: [
           if (tab == 1 && list.isEmpty) _followingEmpty(context),
           for (var i = 0; i < list.length; i++)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 18),
-              child: _ReelCard(reel: list[i], all: widget.reels, onChanged: _refresh, onOpen: () => _openReel(list, list[i])).reveal(context, 2 + i, 0.08),
-            ),
+            _ReelCard(reel: list[i], all: widget.reels, onChanged: _refresh, onOpen: () => _openReel(list, list[i])).reveal(context, 2 + i, 0.08),
         ]),
       ),
     ]);
@@ -107,7 +130,7 @@ class _MediaBodyState extends State<_MediaBody> {
       const EmptyState(Icons.people_alt_rounded, 'Nothing here yet', 'Follow businesses to see their reels here.'),
       for (final r in suggestions)
         Padding(
-          padding: const EdgeInsets.only(bottom: 10),
+          padding: const EdgeInsets.fromLTRB(18, 0, 18, 10),
           child: AppCard(
             child: Row(children: [
               Avatar(r.business, size: 44),
@@ -146,12 +169,14 @@ class _ReelCardState extends State<_ReelCard> {
   @override
   Widget build(BuildContext context) {
     final r = widget.reel;
+    // Instagram-style post: full width, no card, just a thin divider between posts.
     return Container(
-      decoration: BoxDecoration(color: C.surface, borderRadius: BorderRadius.circular(rLg + 4), border: Border.all(color: C.border), boxShadow: C.shadow),
-      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(border: Border(bottom: BorderSide(color: C.border))),
+      padding: const EdgeInsets.only(bottom: 6),
+      margin: const EdgeInsets.only(bottom: 6),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(14, 12, 10, 10),
+          padding: const EdgeInsets.fromLTRB(12, 8, 6, 8),
           child: Row(children: [
             Avatar(r.business, size: 40),
             const SizedBox(width: 10),
@@ -179,6 +204,8 @@ class _ReelCardState extends State<_ReelCard> {
             child: Container(
               decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [r.hue, Color.lerp(r.hue, Colors.black, 0.65)!])),
               child: Stack(children: [
+                if (r.mediaPath != null) Positioned.fill(child: MediaView(path: r.mediaPath, isVideo: r.isVideo, hue: r.hue, edits: r.edits)),
+                if (r.mediaPath == null || r.isVideo)
                 Center(
                   child: Container(
                     width: 70,
@@ -194,9 +221,9 @@ class _ReelCardState extends State<_ReelCard> {
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                     decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.35), borderRadius: BorderRadius.circular(10)),
                     child: Row(mainAxisSize: MainAxisSize.min, children: [
-                      const Icon(Icons.movie_creation_rounded, size: 13, color: Colors.white),
+                      Icon(r.kind == 'post' ? Icons.grid_on_rounded : Icons.movie_creation_rounded, size: 13, color: Colors.white),
                       const SizedBox(width: 5),
-                      Text('Reel · ${r.duration}', style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: Colors.white)),
+                      Text(r.kind == 'post' ? (r.isVideo ? 'Post · ${r.duration}' : 'Post') : 'Reel · ${r.duration}', style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: Colors.white)),
                     ]),
                   ),
                 ),
@@ -219,10 +246,12 @@ class _ReelCardState extends State<_ReelCard> {
                   right: 14,
                   bottom: 12,
                   child: Row(children: [
-                    for (var k = 0; k < 5; k++) Icon(k < r.rating ? Icons.star_rounded : Icons.star_outline_rounded, size: 15, color: const Color(0xFFFFD25E)),
-                    const SizedBox(width: 8),
+                    if (r.rating > 0) ...[
+                      for (var k = 0; k < 5; k++) Icon(k < r.rating ? Icons.star_rounded : Icons.star_outline_rounded, size: 15, color: const Color(0xFFFFD25E)),
+                      const SizedBox(width: 8),
+                    ],
                     Expanded(child: Text(r.reviewer, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: Colors.white))),
-                    const Icon(Icons.volume_off_rounded, size: 18, color: Colors.white70),
+                    if (r.isVideo) const Icon(Icons.volume_off_rounded, size: 18, color: Colors.white70),
                   ]),
                 ),
                 if (burst > 0)
@@ -238,7 +267,7 @@ class _ReelCardState extends State<_ReelCard> {
           ),
         ),
         Padding(
-          padding: const EdgeInsets.fromLTRB(10, 8, 12, 0),
+          padding: const EdgeInsets.fromLTRB(6, 4, 8, 0),
           child: Row(children: [
             _action(r.liked ? Icons.favorite_rounded : Icons.favorite_border_rounded, () => MediaActions.toggleLike(context, r, widget.onChanged), color: r.liked ? const Color(0xFFFF4F6A) : C.text, bounce: r.liked),
             _action(Icons.chat_bubble_outline_rounded, () => showCommentsSheet(context, r, widget.onChanged)),
@@ -248,7 +277,7 @@ class _ReelCardState extends State<_ReelCard> {
           ]),
         ),
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          padding: const EdgeInsets.fromLTRB(14, 0, 14, 10),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text('${compact(r.likes)} likes', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13.5)),
             const SizedBox(height: 4),

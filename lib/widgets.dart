@@ -9,7 +9,9 @@ class AppPage extends StatelessWidget {
   final List<Widget> children;
   /// Fade and rise each block in one after another. Turn off for pages that stagger by themselves.
   final bool reveal;
-  const AppPage({super.key, required this.children, this.reveal = true});
+  /// Side padding. Set to 0 for feeds that run edge to edge.
+  final double hPad;
+  const AppPage({super.key, required this.children, this.reveal = true, this.hPad = 18});
   @override
   Widget build(BuildContext context) {
     var n = 0;
@@ -19,7 +21,7 @@ class AppPage extends StatelessWidget {
         bottom: false,
         child: ListView(
           physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
-          padding: const EdgeInsets.fromLTRB(18, 8, 18, 120),
+          padding: EdgeInsets.fromLTRB(hPad, 8, hPad, 120),
           children: [
             for (final c in children)
               (!reveal || c is SizedBox) ? c : c.reveal(context, (n++).clamp(0, 9), 0.05),

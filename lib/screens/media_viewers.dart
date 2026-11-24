@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../media_data.dart';
+import 'media_create.dart';
 import '../repo.dart';
 import '../widgets.dart';
 import 'media_widgets.dart';
@@ -119,12 +120,23 @@ class _StoryViewerState extends State<StoryViewer> with SingleTickerProviderStat
               child: Container(
                 key: ValueKey('${group.id}-$i'),
                 decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [item.hue, Color.lerp(item.hue, Colors.black, 0.7)!])),
-                child: Center(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 36),
-                    child: Text(item.text, textAlign: TextAlign.center, style: const TextStyle(fontSize: 32, height: 1.2, fontWeight: FontWeight.w800, letterSpacing: -0.8, color: Colors.white)),
-                  ),
-                ),
+                child: item.mediaPath != null
+                    ? Stack(fit: StackFit.expand, children: [
+                        MediaView(path: item.mediaPath, isVideo: item.isVideo, hue: item.hue, play: true, sound: true, edits: item.edits),
+                        if (item.text.isNotEmpty)
+                          Positioned(
+                            left: 24,
+                            right: 24,
+                            bottom: 120,
+                            child: Text(item.text, textAlign: TextAlign.center, style: const TextStyle(fontSize: 22, height: 1.25, fontWeight: FontWeight.w800, color: Colors.white, shadows: [Shadow(blurRadius: 8, color: Colors.black54)])),
+                          ),
+                      ])
+                    : Center(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 36),
+                          child: Text(item.text, textAlign: TextAlign.center, style: const TextStyle(fontSize: 32, height: 1.2, fontWeight: FontWeight.w800, letterSpacing: -0.8, color: Colors.white)),
+                        ),
+                      ),
               ),
             ),
           ),
@@ -330,6 +342,7 @@ class _ReelPageState extends State<_ReelPage> with SingleTickerProviderStateMixi
       child: Container(
         decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [r.hue, Color.lerp(r.hue, Colors.black, 0.75)!])),
         child: Stack(children: [
+          if (r.mediaPath != null) Positioned.fill(child: MediaView(path: r.mediaPath, isVideo: r.isVideo, hue: r.hue, play: playing, sound: true, edits: r.edits)),
           // play / pause mark
           Center(
             child: AnimatedOpacity(

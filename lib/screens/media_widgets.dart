@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../media_data.dart';
+import 'media_create.dart';
 import '../motion.dart';
 import '../repo.dart';
 import '../theme.dart';
@@ -340,7 +341,7 @@ void showCreateSheet(BuildContext context) {
           child: AppCard(
             onTap: () {
               Navigator.pop(context);
-              showMsg(context, '${items[i].$2} creation opens here in the next update');
+              Navigator.of(context).push(MaterialPageRoute(builder: (_) => ComposeScreen(kind: const ['post', 'reel', 'story'][i])));
             },
             child: Row(children: [
               Container(

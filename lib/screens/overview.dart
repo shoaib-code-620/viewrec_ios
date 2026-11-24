@@ -9,7 +9,9 @@ import '../repo.dart';
 import '../shell.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import '../media_data.dart';
 import 'insights.dart';
+import 'media.dart' show StoriesRow;
 import 'invite_composer.dart';
 import 'record.dart';
 import 'video_detail.dart';
@@ -18,21 +20,35 @@ class OverviewScreen extends StatelessWidget {
   final ShellState shell;
   const OverviewScreen({super.key, required this.shell});
 
-  Future<(OverviewStats, List<Video>)> _load() async => (await repo.overview(), await repo.videos());
+  Future<(OverviewStats, List<Video>, List<StoryGroup>)> _load() async {
+    final stats = await repo.overview();
+    final videos = await repo.videos();
+    // Stories are a bonus on Home: if they fail to load, the rest of the page still shows.
+    final stories = await repo.stories().catchError((_) => <StoryGroup>[]);
+    return (stats, videos, stories);
+  }
 
   @override
-  Widget build(BuildContext context) => AsyncView<(OverviewStats, List<Video>)>(
-        load: _load,
-        builder: (context, data, refresh) => RefreshIndicator(
-          color: C.primary,
-          onRefresh: refresh,
-          child: _body(context, data.$1, data.$2),
+  Widget build(BuildContext context) => ValueListenableBuilder<int>(
+        valueListenable: mediaRevision,
+        builder: (context, rev, _) => AsyncView<(OverviewStats, List<Video>, List<StoryGroup>)>(
+          key: ValueKey(rev),
+          load: _load,
+          builder: (context, data, refresh) => RefreshIndicator(
+            color: C.primary,
+            onRefresh: refresh,
+            child: _body(context, data.$1, data.$2, data.$3),
+          ),
         ),
       );
 
-  Widget _body(BuildContext context, OverviewStats s, List<Video> videos) {
+  Widget _body(BuildContext context, OverviewStats s, List<Video> videos, List<StoryGroup> stories) {
     var n = 0;
     return AppPage(reveal: false, children: [
+      if (stories.isNotEmpty) ...[
+        StoriesRow(stories: stories),
+        const SizedBox(height: 6),
+      ],
       _hero(context, s).reveal(context, n++),
       const SizedBox(height: 18),
       _quickActions(context).reveal(context, n++),

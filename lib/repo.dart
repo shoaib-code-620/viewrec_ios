@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'data.dart';
 import 'media_data.dart';
+import 'package:flutter/painting.dart' show Color;
 import 'models.dart';
 
 /// Everything the UI needs from a server. Screens only ever talk to [repo].
@@ -37,6 +38,8 @@ abstract class Repo {
   Future<void> setSave(String reelId, bool save);
   Future<List<Comment>> comments(String reelId);
   Future<Comment> addComment(String reelId, String text);
+  /// Publish your own content from the Create menu. [kind] is 'post', 'reel' or 'story'.
+  Future<void> createContent({required String kind, required XFile file, required bool isVideo, String caption = '', String duration = '0:00', EditSpec? edits, void Function(double)? onProgress});
 
   Future<List<ThreadMessage>> leadMessages(String leadId);
   Future<ThreadMessage> sendLeadMessage(String leadId, String text);
@@ -250,6 +253,43 @@ class MockRepo implements Repo {
   }
 
   @override
+  Future<void> createContent({required String kind, required XFile file, required bool isVideo, String caption = '', String duration = '0:00', EditSpec? edits, void Function(double)? onProgress}) async {
+    final id = DateTime.now().millisecondsSinceEpoch.toString();
+    if (kind == 'story') {
+      final me = _stories.firstWhere((g) => g.mine);
+      me.items.add(StoryItem(hue: const Color(0xFF5B3FE0), text: caption, when: 'now', mediaPath: file.path, isVideo: isVideo, edits: edits));
+    } else {
+      _reels.insert(
+        0,
+        Reel(
+          id: id,
+          businessId: 'b0',
+          business: 'Hartley Roofing',
+          handle: '@hartleyroofing',
+          category: 'Home & Trades',
+          caption: caption,
+          reviewer: '',
+          duration: duration,
+          rating: 0,
+          views: 0,
+          likes: 0,
+          comments: 0,
+          hue: const Color(0xFF3B2A6B),
+          following: true,
+          kind: kind,
+          mediaPath: file.path,
+          isVideo: isVideo,
+          edits: edits,
+        ),
+      );
+    }
+    for (var i = 1; i <= 4; i++) {
+      onProgress?.call(i / 4);
+      await Future<void>.delayed(const Duration(milliseconds: 120));
+    }
+  }
+
+  @override
   Future<Map<String, String>> accounts() => _wait(Map.of(_accounts));
 
   @override
@@ -426,6 +466,45 @@ class ApiRepo implements Repo {
 
   @override
   Future<Comment> addComment(String reelId, String text) async => Comment.fromJson(await _send('POST', '/api/media/reels/$reelId/comments', {'text': text}));
+
+  // NOTE: assumes the backend accepts POST /api/media/{post|reel|story} as multipart (file, caption, duration).
+  @override
+  Future<void> createContent({required String kind, required XFile file, required bool isVideo, String caption = '', String duration = '0:00', EditSpec? edits, void Function(double)? onProgress}) async {
+    final total = await file.length();
+    var sent = 0;
+    final stream = file.openRead().map((chunk) {
+      sent += chunk.length;
+      onProgress?.call(total == 0 ? 0 : sent / total);
+      return chunk;
+    });
+    final req = http.MultipartRequest('POST', _u('/api/media/$kind'))
+      ..fields['caption'] = caption
+      ..fields['duration'] = duration
+      ..fields['isVideo'] = '$isVideo'
+      ..fields['edits'] = jsonEncode(edits?.toJson() ?? {})
+      ..files.add(http.MultipartFile('file', stream, total, filename: file.name, contentType: MediaType(isVideo ? 'video' : 'image', _ext(file))));
+    http.StreamedResponse res;
+    try {
+      res = await req.send().timeout(const Duration(minutes: 5));
+    } catch (_) {
+      throw Exception('Could not reach the server. Check your connection and try again.');
+    }
+    final body = await res.stream.bytesToString();
+    if (res.statusCode >= 400) {
+      String msg = 'Upload failed (${res.statusCode})';
+      try {
+        msg = jsonDecode(body)['error'] ?? msg;
+      } catch (_) {}
+      throw Exception(msg);
+    }
+  }
+
+  static String _ext(XFile f) {
+    final n = f.name.toLowerCase();
+    final dot = n.lastIndexOf('.');
+    final e = dot < 0 ? '' : n.substring(dot + 1);
+    return e == 'jpg' || e.isEmpty ? 'jpeg' : e;
+  }
 
   @override
   Future<Map<String, String>> accounts() async => Map<String, String>.from(await _get('/api/accounts') as Map);

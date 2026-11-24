@@ -1,16 +1,56 @@
 import 'package:flutter/material.dart';
 
+/// Bumped after something is posted, so Home and Media reload their feeds.
+final ValueNotifier<int> mediaRevision = ValueNotifier(0);
+
 Color colorFromHex(String s) => Color(int.parse('FF${s.replaceAll('#', '')}', radix: 16));
+
+/// A piece of text placed on a photo or video. [dx]/[dy] are 0..1 positions inside the frame.
+class TextOverlay {
+  String text;
+  double dx, dy;
+  int color;
+  TextOverlay({required this.text, this.dx = 0.5, this.dy = 0.5, this.color = 0xFFFFFFFF});
+  Map<String, dynamic> toJson() => {'text': text, 'dx': dx, 'dy': dy, 'color': color};
+  factory TextOverlay.fromJson(Map<String, dynamic> j) => TextOverlay(text: j['text'] ?? '', dx: (j['dx'] ?? 0.5).toDouble(), dy: (j['dy'] ?? 0.5).toDouble(), color: j['color'] ?? 0xFFFFFFFF);
+}
+
+/// Edits chosen in the editor. They are applied when the media plays; the original file is not changed.
+class EditSpec {
+  double trimStart, trimEnd; // 0..1 of the video length
+  int filter; // index into the filter list
+  double speed;
+  bool muted;
+  List<TextOverlay> texts;
+  EditSpec({this.trimStart = 0, this.trimEnd = 1, this.filter = 0, this.speed = 1, this.muted = false, List<TextOverlay>? texts}) : texts = texts ?? [];
+  bool get isEmpty => trimStart == 0 && trimEnd == 1 && filter == 0 && speed == 1 && !muted && texts.isEmpty;
+  Map<String, dynamic> toJson() => {'trimStart': trimStart, 'trimEnd': trimEnd, 'filter': filter, 'speed': speed, 'muted': muted, 'texts': texts.map((t) => t.toJson()).toList()};
+  factory EditSpec.fromJson(Map<String, dynamic> j) => EditSpec(
+        trimStart: (j['trimStart'] ?? 0).toDouble(),
+        trimEnd: (j['trimEnd'] ?? 1).toDouble(),
+        filter: j['filter'] ?? 0,
+        speed: (j['speed'] ?? 1).toDouble(),
+        muted: j['muted'] == true,
+        texts: (j['texts'] as List? ?? []).map((e) => TextOverlay.fromJson(e)).toList(),
+      );
+}
 
 /// One slide inside a story.
 class StoryItem {
   final Color hue;
   final String text, when;
-  const StoryItem({required this.hue, required this.text, required this.when});
+  /// A photo or video (file path or URL). Null for the plain coloured demo slides.
+  final String? mediaPath;
+  final bool isVideo;
+  final EditSpec? edits;
+  const StoryItem({required this.hue, required this.text, required this.when, this.mediaPath, this.isVideo = false, this.edits});
   factory StoryItem.fromJson(Map<String, dynamic> j) => StoryItem(
         hue: colorFromHex(j['hue'] ?? '#5B3FE0'),
         text: j['text'] ?? '',
         when: j['when'] ?? '',
+        mediaPath: j['mediaUrl'],
+        isVideo: j['isVideo'] == true,
+        edits: j['edits'] is Map<String, dynamic> ? EditSpec.fromJson(j['edits']) : null,
       );
 }
 
@@ -39,7 +79,17 @@ class Reel {
   final Color hue;
   bool liked, saved, following;
   final bool verified;
+  /// 'testimonial' (customer video), 'post' or 'reel' (made by the business in the Create menu).
+  final String kind;
+  /// Uploaded photo or video (file path or URL). Null for demo content, which shows a coloured background.
+  final String? mediaPath;
+  final bool isVideo;
+  final EditSpec? edits;
   Reel({
+    this.edits,
+    this.kind = 'testimonial',
+    this.mediaPath,
+    this.isVideo = false,
     required this.id,
     required this.businessId,
     required this.business,
@@ -76,6 +126,10 @@ class Reel {
         saved: j['saved'] == true,
         following: j['following'] == true,
         verified: j['verified'] != false,
+        kind: j['kind'] ?? 'testimonial',
+        mediaPath: j['mediaUrl'],
+        isVideo: j['isVideo'] == true,
+        edits: j['edits'] is Map<String, dynamic> ? EditSpec.fromJson(j['edits']) : null,
       );
 }
 
@@ -95,7 +149,7 @@ class Comment {
 // ---------------------------------------------------------------------------
 
 List<StoryGroup> demoStories() => [
-      StoryGroup(id: 'me', business: 'Your story', category: '', mine: true),
+      StoryGroup(id: 'me', business: 'Your story', category: '', mine: true, items: <StoryItem>[]),
       StoryGroup(id: 'b1', business: 'Brightside Dental', category: 'Health & Medical', items: const [
         StoryItem(hue: Color(0xFF2F8FE0), text: 'New patients welcome this month', when: '2h'),
         StoryItem(hue: Color(0xFF0F9F78), text: 'Meet Dr. Hall and the team', when: '5h'),

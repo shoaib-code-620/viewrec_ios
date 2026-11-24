@@ -70,6 +70,8 @@
 		<false/>
 		<key>NSCameraUsageDescription</key>
 	<string>ViewRec uses the camera so you can record your testimonial.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>ViewRec needs your photos so you can share posts, reels and stories.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>ViewRec uses the microphone to record your voice.</string>
 </dict>
