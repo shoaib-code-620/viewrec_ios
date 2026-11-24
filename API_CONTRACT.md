@@ -144,6 +144,37 @@ should be enforced by the server; return `403` with an `error` message if a plan
 ```
 The app checks `name` is not empty and `email` looks valid before sending; the server must validate too.
 
+### Media (stories and reels)
+The Media tab shows other businesses' stories on top and a feed of customer video testimonials ("reels") below.
+
+**GET /api/media/stories** -> one entry per business, newest first. Your own entry has `"mine": true` and no items:
+```json
+[{ "id": "b1", "business": "Brightside Dental", "category": "Health & Medical", "seen": false, "mine": false,
+   "items": [{ "hue": "#2F8FE0", "text": "New patients welcome this month", "when": "2h" }] }]
+```
+**POST /api/media/stories/:id/seen** -> `200`. Stories expire after 24 hours.
+
+**GET /api/media/reels** -> the feed. The app builds the "Following" tab itself from `following`:
+```json
+[{ "id": "r1", "businessId": "b1", "business": "Brightside Dental", "handle": "@brightsidedental", "category": "Health & Medical",
+   "reviewer": "Emma Clarke", "caption": "Painless, friendly and they explained every step.", "duration": "0:48",
+   "rating": 5, "views": 3200, "likes": 412, "comments": 28, "hue": "#2F8FE0",
+   "liked": false, "saved": false, "following": true, "verified": true,
+   "videoUrl": "https://cdn.example.com/r1.mp4" }]
+```
+`videoUrl` is not read by the app yet (gradient placeholders are shown). Add it when video hosting exists and tell us.
+
+**Follow:** `PUT /api/media/businesses/:businessId/follow`, and `DELETE` on the same path to unfollow.
+**Like:** `PUT` / `DELETE /api/media/reels/:id/like`. **Save:** `PUT` / `DELETE /api/media/reels/:id/save`.
+All return `200`. The app updates the screen first and rolls back if the call fails.
+
+**GET /api/media/reels/:id/comments** -> `[{ "id": "c1", "author": "Sophie Walker", "text": "...", "when": "2h" }]`, oldest first.
+**POST /api/media/reels/:id/comments** body `{ "text": "..." }` -> `201` with the new comment. The reel's `comments` count goes up by one.
+
+Not wired yet (the screens are placeholders): creating a post, reel or story, business public profiles, follower lists,
+reporting and blocking. Media shows public user content, so App Store rules require **report** and **block** actions
+and server-side moderation before release.
+
 ## Customer side (opened from the invitation link, no login)
 
 **GET /api/invites/:token** -> `{ "business": "Hartley Roofing", "customer": "Sarah Mitchell", "script": ["line 1", "line 2", "line 3"] }`

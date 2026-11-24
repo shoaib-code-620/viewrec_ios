@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
+import 'liquid_widgets.dart';
 import 'motion.dart';
 import 'theme.dart';
 
@@ -11,17 +13,20 @@ class AppPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     var n = 0;
-    return SafeArea(
-      bottom: false,
-      child: ListView(
-        physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
-        padding: const EdgeInsets.fromLTRB(18, 8, 18, 120),
-        children: [
-          for (final c in children)
-            (!reveal || c is SizedBox) ? c : c.reveal(context, (n++).clamp(0, 9), 0.05),
-        ],
+    return Stack(children: [
+      const Positioned.fill(child: LiquidBackdrop()),
+      SafeArea(
+        bottom: false,
+        child: ListView(
+          physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+          padding: const EdgeInsets.fromLTRB(18, 8, 18, 120),
+          children: [
+            for (final c in children)
+              (!reveal || c is SizedBox) ? c : c.reveal(context, (n++).clamp(0, 9), 0.05),
+          ],
+        ),
       ),
-    );
+    ]);
   }
 }
 
@@ -110,7 +115,7 @@ class AppButton extends StatelessWidget {
       BtnStyle.ghost => BoxDecoration(color: C.surface2, border: Border.all(color: C.border), borderRadius: radius),
       BtnStyle.danger => BoxDecoration(color: C.rec, borderRadius: radius, boxShadow: enabled && !small ? [BoxShadow(color: C.rec.withValues(alpha: 0.3), blurRadius: 18, offset: const Offset(0, 6))] : null),
     };
-    return Opacity(
+    final btn = Opacity(
       opacity: (onTap == null && !loading) ? 0.5 : 1,
       child: Pressable(
         onTap: enabled ? onTap : null,
@@ -131,6 +136,10 @@ class AppButton extends StatelessWidget {
         ),
       ),
     );
+    if (style == BtnStyle.primary && !small && enabled && !reduceMotion(context)) {
+      return btn.animate(onPlay: (c) => c.repeat()).shimmer(duration: 2600.ms, delay: 2800.ms, color: Colors.white.withValues(alpha: 0.22), angle: 0.5);
+    }
+    return btn;
   }
 }
 
@@ -442,7 +451,7 @@ class SwitchTile extends StatelessWidget {
               if (subtitle != null) ...[const SizedBox(height: 2), Muted(subtitle!, size: 12.5)],
             ]),
           ),
-          Switch(value: value, onChanged: onChanged),
+          LiquidSwitch(value: value, onChanged: onChanged),
         ]),
       );
 }
@@ -575,12 +584,7 @@ class Pills extends StatelessWidget {
   final ValueChanged<int> onChanged;
   const Pills(this.labels, this.index, this.onChanged, {super.key});
   @override
-  Widget build(BuildContext context) => SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(children: [
-          for (var i = 0; i < labels.length; i++) AppChip(labels[i], active: i == index, onTap: () => onChanged(i)),
-        ]),
-      );
+  Widget build(BuildContext context) => Align(alignment: Alignment.centerLeft, child: LiquidPills(labels, index, onChanged));
 }
 
 class Stars extends StatelessWidget {

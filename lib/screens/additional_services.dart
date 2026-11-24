@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../liquid_widgets.dart';
 import '../theme.dart';
 import '../widgets.dart';
 
@@ -89,7 +90,7 @@ class _RewardsScreenState extends State<RewardsScreen> {
                       Muted('Code ${c.$2} · ${c.$3} redeemed', size: 12.5),
                     ]),
                   ),
-                  Switch(value: c.$4, onChanged: (_) {}),
+                  LiquidSwitch(value: c.$4, onChanged: (_) {}),
                 ]),
               ),
             ),
@@ -114,7 +115,7 @@ class _RewardsScreenState extends State<RewardsScreen> {
               SizedBox(height: 10),
               Text('2 / 15', style: TextStyle(fontSize: 30, fontWeight: FontWeight.w800, color: C.primary)),
               SizedBox(height: 10),
-              LinearProgressIndicator(value: 2 / 15, minHeight: 8, backgroundColor: C.surface2, color: C.primary),
+              LiquidProgress(value: 2 / 15, minHeight: 8, backgroundColor: C.surface2, color: C.primary),
             ]),
           ),
           const SizedBox(height: 14),

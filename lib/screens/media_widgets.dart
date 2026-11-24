@@ -1,0 +1,367 @@
+import 'dart:math' as math;
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import '../async_view.dart';
+import '../media_data.dart';
+import '../motion.dart';
+import '../repo.dart';
+import '../theme.dart';
+import '../widgets.dart';
+
+String compact(int n) => n >= 1000000 ? '${(n / 1000000).toStringAsFixed(1)}M' : n >= 1000 ? '${(n / 1000).toStringAsFixed(n >= 10000 ? 0 : 1)}k' : '$n';
+
+int durationSeconds(String d) {
+  final p = d.split(':');
+  if (p.length != 2) return 30;
+  return (int.tryParse(p[0]) ?? 0) * 60 + (int.tryParse(p[1]) ?? 30);
+}
+
+/// Follow / Following pill that morphs smoothly between the two states.
+class FollowButton extends StatelessWidget {
+  final bool following;
+  final VoidCallback onTap;
+  final bool onDark; // on top of a video (white text, frosted)
+  const FollowButton({super.key, required this.following, required this.onTap, this.onDark = false});
+
+  @override
+  Widget build(BuildContext context) {
+    final fg = following ? (onDark ? Colors.white : C.text) : Colors.white;
+    return Pressable(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 450),
+        curve: Curves.easeInOutCubic,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(999),
+          gradient: following ? null : const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFF9378FF), Color(0xFF6A4CF0)]),
+          color: following ? (onDark ? Colors.white.withValues(alpha: 0.18) : C.surface2) : null,
+          border: following ? Border.all(color: onDark ? Colors.white.withValues(alpha: 0.35) : C.border) : null,
+          boxShadow: following ? null : [BoxShadow(color: C.primary.withValues(alpha: 0.3), blurRadius: 12, offset: const Offset(0, 4))],
+        ),
+        child: AnimatedSize(
+          duration: const Duration(milliseconds: 350),
+          curve: Curves.easeInOutCubic,
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 300),
+              transitionBuilder: (c, a) => ScaleTransition(scale: a, child: c),
+              child: Icon(following ? Icons.check_rounded : Icons.add_rounded, key: ValueKey(following), size: 15, color: fg),
+            ),
+            const SizedBox(width: 4),
+            Text(following ? 'Following' : 'Follow', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w800, color: fg)),
+          ]),
+        ),
+      ),
+    );
+  }
+}
+
+/// A story circle: a slowly turning colourful ring for new stories, a calm grey ring once seen.
+class StoryRing extends StatefulWidget {
+  final String name;
+  final bool seen, mine;
+  final VoidCallback onTap;
+  const StoryRing({super.key, required this.name, required this.seen, required this.mine, required this.onTap});
+  @override
+  State<StoryRing> createState() => _StoryRingState();
+}
+
+class _StoryRingState extends State<StoryRing> with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(vsync: this, duration: const Duration(seconds: 8))..repeat();
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final animate = !widget.seen && !widget.mine && !reduceMotion(context);
+    return Pressable(
+      onTap: widget.onTap,
+      scale: 0.94,
+      child: SizedBox(
+        width: 78,
+        child: Column(children: [
+          SizedBox(
+            width: 72,
+            height: 72,
+            child: Stack(alignment: Alignment.center, children: [
+              AnimatedBuilder(
+                animation: _c,
+                builder: (context, _) => CustomPaint(
+                  size: const Size(72, 72),
+                  painter: _RingPainter(rotation: animate ? _c.value * math.pi * 2 : 0.6, seen: widget.seen, mine: widget.mine),
+                ),
+              ),
+              Avatar(widget.mine ? 'Hartley Roofing' : widget.name, size: 58),
+              if (widget.mine)
+                Positioned(
+                  right: 2,
+                  bottom: 2,
+                  child: Container(
+                    width: 22,
+                    height: 22,
+                    decoration: BoxDecoration(shape: BoxShape.circle, color: C.primary, border: Border.all(color: C.bg, width: 2.5)),
+                    child: const Icon(Icons.add_rounded, size: 14, color: Colors.white),
+                  ),
+                ),
+            ]),
+          ),
+          const SizedBox(height: 7),
+          Text(widget.name, maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center, style: TextStyle(fontSize: 11.5, fontWeight: widget.seen ? FontWeight.w500 : FontWeight.w700, color: widget.seen ? C.muted : C.text)),
+        ]),
+      ),
+    );
+  }
+}
+
+class _RingPainter extends CustomPainter {
+  final double rotation;
+  final bool seen, mine;
+  _RingPainter({required this.rotation, required this.seen, required this.mine});
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = (Offset.zero & size).deflate(2);
+    final p = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = seen || mine ? 2 : 3.2
+      ..strokeCap = StrokeCap.round;
+    if (seen || mine) {
+      p.color = mine ? C.border : C.border.withValues(alpha: 1);
+    } else {
+      p.shader = SweepGradient(
+        transform: GradientRotation(rotation),
+        colors: const [Color(0xFF7C5CFF), Color(0xFFFF4F9A), Color(0xFFFFB84D), Color(0xFF7C5CFF)],
+      ).createShader(rect);
+    }
+    canvas.drawOval(rect, p);
+  }
+
+  @override
+  bool shouldRepaint(_RingPainter o) => o.rotation != rotation || o.seen != seen || o.mine != mine;
+}
+
+/// Likes, saves, follows and shares for a reel. Updates the screen straight away and rolls back if the server refuses.
+class MediaActions {
+  static Future<void> toggleFollow(BuildContext context, Reel r, List<Reel> all, VoidCallback refresh) async {
+    final next = !r.following;
+    for (final x in all.where((x) => x.businessId == r.businessId)) {
+      x.following = next;
+    }
+    refresh();
+    try {
+      await repo.setFollow(r.businessId, next);
+    } catch (_) {
+      for (final x in all.where((x) => x.businessId == r.businessId)) {
+        x.following = !next;
+      }
+      refresh();
+      if (context.mounted) showMsg(context, "Couldn't update that. Try again.");
+    }
+  }
+
+  static Future<void> toggleLike(BuildContext context, Reel r, VoidCallback refresh, {bool? force}) async {
+    final next = force ?? !r.liked;
+    if (r.liked == next) return;
+    HapticFeedback.lightImpact();
+    r.liked = next;
+    r.likes += next ? 1 : -1;
+    refresh();
+    try {
+      await repo.setLike(r.id, next);
+    } catch (_) {
+      r.liked = !next;
+      r.likes += next ? -1 : 1;
+      refresh();
+      if (context.mounted) showMsg(context, "Couldn't update that. Try again.");
+    }
+  }
+
+  static Future<void> toggleSave(BuildContext context, Reel r, VoidCallback refresh) async {
+    final next = !r.saved;
+    r.saved = next;
+    refresh();
+    try {
+      await repo.setSave(r.id, next);
+      if (context.mounted) showMsg(context, next ? 'Saved to your collection' : 'Removed from saved');
+    } catch (_) {
+      r.saved = !next;
+      refresh();
+    }
+  }
+
+  static void share(BuildContext context, Reel r) {
+    Clipboard.setData(ClipboardData(text: 'https://viewrec.com/media/${r.id}'));
+    showMsg(context, 'Link copied');
+  }
+}
+
+/// Comments for one reel, with a box to add yours.
+void showCommentsSheet(BuildContext context, Reel reel, VoidCallback onChanged) {
+  showSheet(
+    context,
+    Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Row(children: [
+        const H2('Comments'),
+        const SizedBox(width: 8),
+        Text('${reel.comments}', style: TextStyle(color: C.muted, fontWeight: FontWeight.w700)),
+      ]),
+      const SizedBox(height: 12),
+      _CommentsBody(reel: reel, onChanged: onChanged),
+    ]),
+  );
+}
+
+class _CommentsBody extends StatefulWidget {
+  final Reel reel;
+  final VoidCallback onChanged;
+  const _CommentsBody({required this.reel, required this.onChanged});
+  @override
+  State<_CommentsBody> createState() => _CommentsBodyState();
+}
+
+class _CommentsBodyState extends State<_CommentsBody> {
+  final input = TextEditingController();
+  List<Comment>? list;
+  bool sending = false;
+
+  @override
+  void initState() {
+    super.initState();
+    repo.comments(widget.reel.id).then((v) {
+      if (mounted) setState(() => list = v);
+    }).catchError((_) {
+      if (mounted) setState(() => list = []);
+    });
+  }
+
+  @override
+  void dispose() {
+    input.dispose();
+    super.dispose();
+  }
+
+  Future<void> _send() async {
+    final t = input.text.trim();
+    if (t.isEmpty || sending) return;
+    setState(() => sending = true);
+    try {
+      final c = await repo.addComment(widget.reel.id, t);
+      if (!mounted) return;
+      setState(() {
+        list = [...?list, c];
+        input.clear();
+      });
+      widget.onChanged();
+    } catch (_) {
+      if (mounted) showMsg(context, "Couldn't post your comment. Try again.");
+    } finally {
+      if (mounted) setState(() => sending = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => Column(children: [
+        SizedBox(
+          height: 300,
+          child: list == null
+              ? const Center(child: CircularProgressIndicator())
+              : list!.isEmpty
+                  ? const EmptyState(Icons.chat_bubble_outline_rounded, 'No comments yet', 'Be the first to say something.')
+                  : ListView(children: [
+                      for (final c in list!)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 14),
+                          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                            Avatar(c.author, size: 34),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                Row(children: [
+                                  Text(c.author, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13.5)),
+                                  const SizedBox(width: 8),
+                                  Text(c.when, style: TextStyle(fontSize: 11.5, color: C.muted)),
+                                ]),
+                                const SizedBox(height: 2),
+                                Text(c.text, style: const TextStyle(fontSize: 14, height: 1.35)),
+                              ]),
+                            ),
+                          ]),
+                        ),
+                    ]),
+        ),
+        Row(children: [
+          Expanded(
+            child: TextField(
+              controller: input,
+              onSubmitted: (_) => _send(),
+              decoration: InputDecoration(
+                hintText: 'Add a comment…',
+                hintStyle: TextStyle(color: C.muted),
+                filled: true,
+                fillColor: C.surface2,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(999), borderSide: BorderSide.none),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Pressable(
+            onTap: sending ? null : _send,
+            child: Container(
+              width: 46,
+              height: 46,
+              decoration: const BoxDecoration(shape: BoxShape.circle, gradient: LinearGradient(colors: [Color(0xFF9378FF), Color(0xFF6A4CF0)])),
+              child: sending ? const Padding(padding: EdgeInsets.all(13), child: CircularProgressIndicator(strokeWidth: 2.4, color: Colors.white)) : const Icon(Icons.arrow_upward_rounded, color: Colors.white, size: 22),
+            ),
+          ),
+        ]),
+      ]);
+}
+
+/// The "+" menu: what do you want to create?
+void showCreateSheet(BuildContext context) {
+  final items = <(IconData, String, String, Color)>[
+    (Icons.grid_on_rounded, 'Post', 'Share a photo or video with a caption', const Color(0xFF2F8FE0)),
+    (Icons.movie_creation_rounded, 'Reel', 'A short vertical video customers can follow', const Color(0xFFFF4F9A)),
+    (Icons.auto_stories_rounded, 'Story', 'Disappears after 24 hours', const Color(0xFFFFB84D)),
+  ];
+  showSheet(
+    context,
+    Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      const H2('Create'),
+      const SizedBox(height: 4),
+      const Muted('Share something with your followers.', size: 13),
+      const SizedBox(height: 16),
+      for (var i = 0; i < items.length; i++)
+        Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: AppCard(
+            onTap: () {
+              Navigator.pop(context);
+              showMsg(context, '${items[i].$2} creation opens here in the next update');
+            },
+            child: Row(children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(color: items[i].$4.withValues(alpha: 0.16), borderRadius: BorderRadius.circular(15)),
+                child: Icon(items[i].$1, color: items[i].$4),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(items[i].$2, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+                  const SizedBox(height: 2),
+                  Muted(items[i].$3, size: 12.5),
+                ]),
+              ),
+              Icon(Icons.chevron_right_rounded, color: C.muted),
+            ]),
+          ).reveal(context, i, 0.1),
+        ),
+    ]),
+  );
+}

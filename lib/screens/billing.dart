@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../liquid_widgets.dart';
 import '../async_view.dart';
 import '../models.dart';
 import '../repo.dart';
@@ -42,7 +43,7 @@ class BillingScreen extends StatelessWidget {
                   const SizedBox(height: 14),
                   ClipRRect(
                     borderRadius: BorderRadius.circular(3),
-                    child: LinearProgressIndicator(value: b.trialDay / b.trialLength, minHeight: 6, backgroundColor: C.heroPillBorder, color: C.primary),
+                    child: LiquidProgress(value: b.trialDay / b.trialLength, minHeight: 6, backgroundColor: C.heroPillBorder, color: C.primary),
                   ),
                 ],
                 const SizedBox(height: 14),

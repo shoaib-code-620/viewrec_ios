@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../liquid_widgets.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../async_view.dart';
 import '../models.dart';
@@ -83,7 +84,7 @@ class InsightsScreen extends StatelessWidget {
                                 const SizedBox(height: 6),
                                 ClipRRect(
                                   borderRadius: BorderRadius.circular(4),
-                                  child: LinearProgressIndicator(value: p.views / maxPlat, minHeight: 8, backgroundColor: C.surface2, color: C.primary),
+                                  child: LiquidProgress(value: p.views / maxPlat, minHeight: 8, backgroundColor: C.surface2, color: C.primary),
                                 ),
                               ]),
                             ),

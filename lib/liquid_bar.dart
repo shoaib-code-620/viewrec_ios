@@ -3,32 +3,30 @@ import 'package:flutter/material.dart';
 import 'motion.dart';
 import 'theme.dart';
 
-/// A bottom bar with a "water" feel:
-///  - a droplet that slides to the chosen tab, stretching as it moves and wobbling as it lands,
-///  - ripples that spread from the exact spot you tap,
-///  - a soft wave that flows along the bottom edge.
-/// [children] must be [kSlots] equal-width slots (usually Expanded widgets).
+/// A calm "liquid" bottom bar.
+/// The bar and a bubble are drawn as one blob of liquid (metaball effect): the bubble rises out of the bar
+/// behind the chosen tab and, when you pick another tab, glides across slowly while a softer trailing blob
+/// stretches a smooth neck behind it. A gentle wave flows through the bar and the bubble breathes slowly.
+/// Everything is slow and smooth on purpose, so it feels soothing rather than bouncy.
+///
+/// [children] are [kSlots] equal-width slots (usually Expanded widgets) placed on the bar.
 class LiquidNavBar extends StatefulWidget {
   final int selected; // slot index 0..4
   final List<Widget> children;
   const LiquidNavBar({super.key, required this.selected, required this.children});
 
   static const kSlots = 5;
+  static const barHeight = 70.0;
+  static const rise = 26.0; // room above the bar for the bubble
+  static const totalHeight = barHeight + rise;
 
   @override
   State<LiquidNavBar> createState() => _LiquidNavBarState();
 }
 
-class _Ripple {
-  final Offset pos;
-  final AnimationController c;
-  _Ripple(this.pos, this.c);
-}
-
 class _LiquidNavBarState extends State<LiquidNavBar> with TickerProviderStateMixin {
-  late final AnimationController _move = AnimationController(vsync: this, duration: const Duration(milliseconds: 850), value: 1);
-  late final AnimationController _wave = AnimationController(vsync: this, duration: const Duration(seconds: 7))..repeat();
-  final List<_Ripple> _ripples = [];
+  late final AnimationController _move = AnimationController(vsync: this, duration: const Duration(milliseconds: 1000), value: 1);
+  late final AnimationController _ambient = AnimationController(vsync: this, duration: const Duration(seconds: 10))..repeat();
   late int _from = widget.selected;
   late int _to = widget.selected;
 
@@ -49,131 +47,139 @@ class _LiquidNavBarState extends State<LiquidNavBar> with TickerProviderStateMix
   @override
   void dispose() {
     _move.dispose();
-    _wave.dispose();
-    for (final r in _ripples) {
-      r.c.dispose();
-    }
+    _ambient.dispose();
     super.dispose();
   }
 
-  void _addRipple(Offset p) {
-    if (reduceMotion(context)) return;
-    final c = AnimationController(vsync: this, duration: const Duration(milliseconds: 950));
-    final r = _Ripple(p, c);
-    _ripples.add(r);
-    c.addStatusListener((s) {
-      if (s == AnimationStatus.completed) {
-        _ripples.remove(r);
-        c.dispose();
-        if (mounted) setState(() {});
-      }
-    });
-    c.forward();
-    setState(() {});
-  }
-
   @override
-  Widget build(BuildContext context) => LayoutBuilder(
-        builder: (context, cons) {
-          final w = cons.maxWidth;
-          final h = cons.maxHeight.isFinite ? cons.maxHeight : 70.0;
-          return Listener(
-            behavior: HitTestBehavior.translucent,
-            onPointerDown: (e) => _addRipple(e.localPosition),
-            child: Stack(children: [
+  Widget build(BuildContext context) => SizedBox(
+        height: LiquidNavBar.totalHeight,
+        child: LayoutBuilder(
+          builder: (context, cons) {
+            final w = cons.maxWidth;
+            return Stack(children: [
               Positioned.fill(
                 child: IgnorePointer(
                   child: RepaintBoundary(
                     child: AnimatedBuilder(
-                      animation: Listenable.merge([_move, _wave, ..._ripples.map((r) => r.c)]),
+                      animation: Listenable.merge([_move, _ambient]),
                       builder: (context, _) => CustomPaint(
                         painter: _LiquidPainter(
                           width: w,
-                          height: h,
                           from: _from,
                           to: _to,
                           move: _move.value,
-                          wave: _wave.value,
-                          ripples: [for (final r in _ripples) (r.pos, r.c.value)],
-                          color: C.primary,
+                          ambient: _ambient.value,
                           dark: C.dark,
-                          still: reduceMotion(context),
+                          calm: reduceMotion(context),
                         ),
                       ),
                     ),
                   ),
                 ),
               ),
-              Row(children: widget.children),
-            ]),
-          );
-        },
+              Positioned(left: 0, right: 0, top: LiquidNavBar.rise, height: LiquidNavBar.barHeight, child: Row(children: widget.children)),
+            ]);
+          },
+        ),
       );
 }
 
 class _LiquidPainter extends CustomPainter {
-  final double width, height, move, wave;
+  final double width, move, ambient;
   final int from, to;
-  final List<(Offset, double)> ripples;
-  final Color color;
-  final bool dark, still;
-  _LiquidPainter({required this.width, required this.height, required this.from, required this.to, required this.move, required this.wave, required this.ripples, required this.color, required this.dark, required this.still});
+  final bool dark, calm;
+  _LiquidPainter({required this.width, required this.from, required this.to, required this.move, required this.ambient, required this.dark, required this.calm});
 
   double _cx(int slot) => (slot + 0.5) * width / LiquidNavBar.kSlots;
 
+  static const _gooMatrix = <double>[
+    1, 0, 0, 0, 0, //
+    0, 1, 0, 0, 0, //
+    0, 0, 1, 0, 0, //
+    0, 0, 0, 22, -2805, // alpha = 22 * alpha - 11 * 255: crisp edges where the blurred shapes overlap
+  ];
+
   @override
   void paint(Canvas canvas, Size size) {
-    // ---- 1. flowing wave along the bottom
-    if (!still) {
-      final phase = wave * math.pi * 2;
-      void drawWave(double base, double amp, double freq, double ph, double alpha) {
-        final path = Path()..moveTo(0, height);
+    const rise = LiquidNavBar.rise;
+    const barH = LiquidNavBar.barHeight;
+    final bar = RRect.fromRectAndRadius(Rect.fromLTWH(0, rise, width, barH), const Radius.circular(34));
+
+    // ---- where the liquid is
+    final t = calm ? 1.0 : move.clamp(0.0, 1.0);
+    final fx = _cx(from), tx = _cx(to);
+    final lead = fx + (tx - fx) * Curves.easeInOutCubic.transform(((t - 0.0) / 0.78).clamp(0.0, 1.0));
+    final trail = fx + (tx - fx) * Curves.easeInOutCubic.transform(((t - 0.16) / 0.84).clamp(0.0, 1.0));
+    final breathe = calm ? 0.0 : math.sin(ambient * math.pi * 2 * 2.2) * 1.1; // slow breathing
+    final float = calm ? 0.0 : math.sin(ambient * math.pi * 2 * 1.3) * 1.2;
+    final r = 27.0 + breathe;
+    final cy = rise + 7.0 + float;
+    final moving = (tx - fx).abs() > 1 && t < 1;
+
+    // ---- soft shadow under everything
+    final shadowPaint = Paint()
+      ..color = dark ? Colors.black.withValues(alpha: 0.55) : const Color(0xFF1B1550).withValues(alpha: 0.16)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 16);
+    canvas.save();
+    canvas.translate(0, 9);
+    canvas.drawRRect(bar, shadowPaint);
+    canvas.drawCircle(Offset(lead, cy), r, shadowPaint);
+    canvas.restore();
+
+    // ---- the liquid body: bar + bubble + trailing blob, blurred then thresholded so they melt together
+    final bodyColor = dark ? const Color(0xFF191928) : Colors.white;
+    final blur = Paint()
+      ..color = bodyColor
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
+    canvas.saveLayer(Rect.fromLTWH(-20, -20, width + 40, LiquidNavBar.totalHeight + 40), Paint()..colorFilter = const ColorFilter.matrix(_gooMatrix));
+    canvas.drawRRect(bar, blur);
+    canvas.drawCircle(Offset(lead, cy), r + 3, blur);
+    if (moving) {
+      // a smaller, lagging blob: stretches a smooth neck behind the bubble as it travels
+      final k = math.sin(math.pi * t); // strongest mid-way
+      canvas.drawCircle(Offset(trail, cy + 8), 15 + 5 * k, blur);
+    }
+    canvas.restore();
+
+    // ---- thin edge light along the top of the bar
+    final edge = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1
+      ..color = dark ? const Color(0x14FFFFFF) : const Color(0xFFE6E6F1);
+    canvas.drawRRect(bar.deflate(0.5), edge);
+
+    // ---- a slow wave of colour flowing through the bar
+    if (!calm) {
+      canvas.save();
+      canvas.clipRRect(bar);
+      final phase = ambient * math.pi * 2;
+      void wave(double base, double amp, double freq, double ph, double alpha) {
+        final p = Path()..moveTo(0, rise + barH);
         for (double x = 0; x <= width; x += 4) {
-          path.lineTo(x, base + math.sin((x / width) * math.pi * 2 * freq + ph) * amp);
+          p.lineTo(x, rise + base + math.sin((x / width) * math.pi * 2 * freq + ph) * amp);
         }
-        path
-          ..lineTo(width, height)
+        p
+          ..lineTo(width, rise + barH)
           ..close();
-        canvas.drawPath(path, Paint()..color = color.withValues(alpha: alpha));
+        canvas.drawPath(p, Paint()..color = C.primary.withValues(alpha: alpha));
       }
 
-      drawWave(height * 0.84, 3.4, 1.7, phase, dark ? 0.12 : 0.09);
-      drawWave(height * 0.9, 3.0, 2.3, -phase * 1.3 + 1.2, dark ? 0.09 : 0.07);
+      wave(barH * 0.8, 3.6, 1.4, phase, dark ? 0.10 : 0.07);
+      wave(barH * 0.88, 3.0, 1.9, -phase * 1.2 + 1.0, dark ? 0.08 : 0.06);
+      canvas.restore();
     }
 
-    // ---- 2. ripples from taps
-    for (final (pos, p) in ripples) {
-      final e = Curves.easeOut.transform(p);
-      final a = (1 - p).clamp(0.0, 1.0);
-      canvas.drawCircle(pos, e * 76, Paint()..style = PaintingStyle.stroke..strokeWidth = 2.4..color = color.withValues(alpha: 0.38 * a));
-      canvas.drawCircle(pos, e * 50, Paint()..style = PaintingStyle.stroke..strokeWidth = 1.6..color = color.withValues(alpha: 0.26 * a));
-      canvas.drawCircle(pos, e * 62, Paint()..color = color.withValues(alpha: 0.09 * a));
-    }
-
-    // ---- 3. the water droplet behind the selected tab
-    final cy = 29.0;
-    final fx = _cx(from), tx = _cx(to);
-    final t = move.clamp(0.0, 1.0);
-    final lead = fx + (tx - fx) * Curves.easeOutBack.transform(t);
-    final trailT = Curves.easeInOutCubic.transform(((t - 0.14) / 0.86).clamp(0.0, 1.0));
-    final trail = fx + (tx - fx) * trailT;
-    const halfW = 25.0;
-    final left = math.min(lead, trail) - halfW;
-    final right = math.max(lead, trail) + halfW;
-    final squash = 5.0 * math.sin(math.pi * t);
-    final wobble = t > 0.55 ? math.sin((t - 0.55) * math.pi * 7) * (1 - t) * 4.5 : 0.0;
-    final hh = (35.0 - squash + wobble).clamp(24.0, 42.0);
-    final rrect = RRect.fromLTRBR(left, cy - hh / 2, right, cy + hh / 2, Radius.circular(hh / 2));
-
-    canvas.drawRRect(rrect.inflate(2), Paint()..color = color.withValues(alpha: dark ? 0.35 : 0.3)..maskFilter = const MaskFilter.blur(BlurStyle.normal, 11));
-    canvas.drawRRect(
-      rrect,
-      Paint()..shader = LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [color.withValues(alpha: dark ? 0.42 : 0.3), color.withValues(alpha: dark ? 0.22 : 0.16)]).createShader(rrect.outerRect),
+    // ---- the bubble itself: soft glow, gradient, gentle light
+    final c = Offset(lead, cy);
+    canvas.drawCircle(c, r - 2, Paint()..color = C.primary.withValues(alpha: dark ? 0.45 : 0.4)..maskFilter = const MaskFilter.blur(BlurStyle.normal, 12));
+    final inner = Rect.fromCircle(center: c, radius: r - 3.5);
+    canvas.drawCircle(
+      c,
+      r - 3.5,
+      Paint()..shader = const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFF9D86FF), Color(0xFF6A4CF0)]).createShader(inner),
     );
-    canvas.drawRRect(rrect, Paint()..style = PaintingStyle.stroke..strokeWidth = 1.2..color = color.withValues(alpha: 0.45));
-    // little highlight, like light on a water drop
-    final hl = Rect.fromLTWH(rrect.left + 9, rrect.top + 4.5, math.max(10.0, rrect.width * 0.34), 4.2);
-    canvas.drawRRect(RRect.fromRectAndRadius(hl, const Radius.circular(3)), Paint()..color = Colors.white.withValues(alpha: dark ? 0.22 : 0.5));
+    canvas.drawArc(Rect.fromCircle(center: c, radius: r - 8), math.pi * 1.1, math.pi * 0.55, false, Paint()..style = PaintingStyle.stroke..strokeWidth = 2.2..strokeCap = StrokeCap.round..color = Colors.white.withValues(alpha: 0.35));
   }
 
   @override

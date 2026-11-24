@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../liquid_widgets.dart';
 import '../async_view.dart';
 import '../data.dart';
 import '../models.dart';
@@ -54,7 +55,7 @@ class _PublishingBodyState extends State<_PublishingBody> {
             const SizedBox(height: 10),
             ClipRRect(
               borderRadius: BorderRadius.circular(4),
-              child: LinearProgressIndicator(
+              child: LiquidProgress(
                 value: d.monthlyLimit == 0 ? 0 : d.usedThisMonth / d.monthlyLimit,
                 minHeight: 8,
                 backgroundColor: C.surface2,

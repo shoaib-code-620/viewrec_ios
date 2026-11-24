@@ -3,6 +3,7 @@ import 'dart:io' show File;
 import 'package:camera/camera.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import '../liquid_widgets.dart';
 import 'package:video_player/video_player.dart';
 import '../data.dart';
 import '../repo.dart';
@@ -643,7 +644,7 @@ class _RecordScreenState extends State<RecordScreen> {
                 if (uploading)
                   ClipRRect(
                     borderRadius: BorderRadius.circular(2),
-                    child: LinearProgressIndicator(value: progress, minHeight: 4, backgroundColor: Colors.white24, color: C.primary),
+                    child: LiquidProgress(value: progress, minHeight: 4, backgroundColor: Colors.white24, color: C.primary),
                   )
                 else
                   AppButton('Record again', style: BtnStyle.ghost, onTap: _again),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'theme.dart';
 import 'widgets.dart';
 
@@ -85,7 +86,7 @@ class _SkeletonListState extends State<SkeletonList> with SingleTickerProviderSt
   Widget build(BuildContext context) => AnimatedBuilder(
         animation: _c,
         builder: (context, _) => Opacity(
-          opacity: 0.45 + 0.55 * _c.value,
+          opacity: 0.8 + 0.2 * _c.value,
           child: ListView(
             physics: const NeverScrollableScrollPhysics(),
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
@@ -108,7 +109,7 @@ class _SkeletonListState extends State<SkeletonList> with SingleTickerProviderSt
                   ]),
                 ),
             ],
-          ),
+          ).animate(onPlay: (c) => c.repeat()).shimmer(duration: 1800.ms, color: C.primary.withValues(alpha: 0.16)),
         ),
       );
 }

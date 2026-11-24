@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'data.dart';
+import 'media_data.dart';
 import 'models.dart';
 
 /// Everything the UI needs from a server. Screens only ever talk to [repo].
@@ -26,6 +27,16 @@ abstract class Repo {
   Future<PostsData> posts();
 
   Future<InsightsData> insights();
+
+  // ---- Media: stories, reels, follow, like, save, comments
+  Future<List<StoryGroup>> stories();
+  Future<void> markStorySeen(String groupId);
+  Future<List<Reel>> reels();
+  Future<void> setFollow(String businessId, bool follow);
+  Future<void> setLike(String reelId, bool like);
+  Future<void> setSave(String reelId, bool save);
+  Future<List<Comment>> comments(String reelId);
+  Future<Comment> addComment(String reelId, String text);
 
   Future<List<ThreadMessage>> leadMessages(String leadId);
   Future<ThreadMessage> sendLeadMessage(String leadId, String text);
@@ -186,6 +197,58 @@ class MockRepo implements Repo {
     return _wait(m);
   }
 
+  // ---- Media
+  final _stories = demoStories();
+  final _reels = demoReels();
+  final _comments = <String, List<Comment>>{};
+
+  @override
+  Future<List<StoryGroup>> stories() => _wait(List.of(_stories));
+
+  @override
+  Future<void> markStorySeen(String groupId) async {
+    final i = _stories.indexWhere((g) => g.id == groupId);
+    if (i >= 0) _stories[i].seen = true;
+  }
+
+  @override
+  Future<List<Reel>> reels() => _wait(List.of(_reels));
+
+  @override
+  Future<void> setFollow(String businessId, bool follow) async {
+    for (final r in _reels.where((r) => r.businessId == businessId)) {
+      r.following = follow;
+    }
+    await _wait(null);
+  }
+
+  @override
+  Future<void> setLike(String reelId, bool like) async {
+    final r = _reels.firstWhere((x) => x.id == reelId);
+    if (r.liked != like) {
+      r.liked = like;
+      r.likes += like ? 1 : -1;
+    }
+    await _wait(null);
+  }
+
+  @override
+  Future<void> setSave(String reelId, bool save) async {
+    _reels.firstWhere((x) => x.id == reelId).saved = save;
+    await _wait(null);
+  }
+
+  @override
+  Future<List<Comment>> comments(String reelId) => _wait(List.of(_comments.putIfAbsent(reelId, () => List.of(demoComments(reelId)))));
+
+  @override
+  Future<Comment> addComment(String reelId, String text) async {
+    final c = Comment(id: DateTime.now().millisecondsSinceEpoch.toString(), author: 'You', text: text, when: 'now');
+    _comments.putIfAbsent(reelId, () => List.of(demoComments(reelId))).add(c);
+    _reels.firstWhere((x) => x.id == reelId).comments += 1;
+    return _wait(c);
+  }
+
   @override
   Future<Map<String, String>> accounts() => _wait(Map.of(_accounts));
 
@@ -338,6 +401,31 @@ class ApiRepo implements Repo {
   @override
   Future<ThreadMessage> sendLeadMessage(String leadId, String text) async =>
       ThreadMessage.fromJson(await _send('POST', '/api/leads/$leadId/messages', {'text': text}));
+
+  // ---- Media
+  @override
+  Future<List<StoryGroup>> stories() async => (await _get('/api/media/stories') as List).map((e) => StoryGroup.fromJson(e)).toList();
+
+  @override
+  Future<void> markStorySeen(String groupId) => _send('POST', '/api/media/stories/$groupId/seen');
+
+  @override
+  Future<List<Reel>> reels() async => (await _get('/api/media/reels') as List).map((e) => Reel.fromJson(e)).toList();
+
+  @override
+  Future<void> setFollow(String businessId, bool follow) => _send(follow ? 'PUT' : 'DELETE', '/api/media/businesses/$businessId/follow');
+
+  @override
+  Future<void> setLike(String reelId, bool like) => _send(like ? 'PUT' : 'DELETE', '/api/media/reels/$reelId/like');
+
+  @override
+  Future<void> setSave(String reelId, bool save) => _send(save ? 'PUT' : 'DELETE', '/api/media/reels/$reelId/save');
+
+  @override
+  Future<List<Comment>> comments(String reelId) async => (await _get('/api/media/reels/$reelId/comments') as List).map((e) => Comment.fromJson(e)).toList();
+
+  @override
+  Future<Comment> addComment(String reelId, String text) async => Comment.fromJson(await _send('POST', '/api/media/reels/$reelId/comments', {'text': text}));
 
   @override
   Future<Map<String, String>> accounts() async => Map<String, String>.from(await _get('/api/accounts') as Map);

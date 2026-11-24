@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../liquid_widgets.dart';
 import '../repo.dart';
 import '../data.dart';
 import '../theme.dart';
@@ -81,7 +82,7 @@ class _VideoDetailScreenState extends State<VideoDetailScreen> {
                 CircleAvatar(radius: 18, backgroundColor: C.surface2, child: Icon(p.icon, size: 18)),
                 const SizedBox(width: 12),
                 Expanded(child: Text(p.name, style: const TextStyle(fontSize: 15))),
-                Switch(value: on[p.id]!, onChanged: (x) => setState(() => on[p.id] = x)),
+                LiquidSwitch(value: on[p.id]!, onChanged: (x) => setState(() => on[p.id] = x)),
               ]),
             ),
           const SizedBox(height: 16),

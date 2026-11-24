@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:viewrec/data.dart';
+import 'package:viewrec/media_data.dart';
 import 'package:viewrec/models.dart';
+import 'package:viewrec/screens/inbox.dart';
+import 'package:viewrec/screens/media_viewers.dart';
 import 'package:viewrec/screens/additional_services.dart';
 import 'package:viewrec/screens/assistant.dart';
 import 'package:viewrec/screens/contact_detail.dart';
@@ -73,6 +76,11 @@ final screens = <String, Widget Function()>{
   'Record write': () => const RecordScreen(initialStage: Stage.write),
   'Record avatar': () => const RecordScreen(initialStage: Stage.avatar),
   'Record done': () => const RecordScreen(initialStage: Stage.done),
+  'Media feed': () => const Shell(initialIndex: kMediaIndex),
+  'More': () => const Shell(initialIndex: kMoreIndex),
+  'Inbox': () => const InboxScreen(),
+  'Story viewer': () => StoryViewer(groups: demoStories().where((g) => !g.mine).toList()),
+  'Reels viewer': () => ReelsViewer(reels: demoReels(), onChanged: () {}),
 };
 
 void main() {
