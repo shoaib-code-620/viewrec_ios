@@ -119,7 +119,7 @@ class _LiquidPainter extends CustomPainter {
 
     // ---- soft shadow under everything
     final shadowPaint = Paint()
-      ..color = dark ? Colors.black.withValues(alpha: 0.55) : const Color(0xFF1B1550).withValues(alpha: 0.16)
+      ..color = dark ? Colors.black.withValues(alpha: 0.55) : const Color(0xFF0B1B3A).withValues(alpha: 0.16)
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 16);
     canvas.save();
     canvas.translate(0, 9);
@@ -146,7 +146,7 @@ class _LiquidPainter extends CustomPainter {
     final edge = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1
-      ..color = dark ? const Color(0x14FFFFFF) : const Color(0xFFE6E6F1);
+      ..color = dark ? const Color(0x14FFFFFF) : const Color(0xFFE1EAF8);
     canvas.drawRRect(bar.deflate(0.5), edge);
 
     // ---- a slow wave of colour flowing through the bar
@@ -177,7 +177,7 @@ class _LiquidPainter extends CustomPainter {
     canvas.drawCircle(
       c,
       r - 3.5,
-      Paint()..shader = const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFF9D86FF), Color(0xFF6A4CF0)]).createShader(inner),
+      Paint()..shader = const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFF3E94F5), Color(0xFF0B5FC4)]).createShader(inner),
     );
     canvas.drawArc(Rect.fromCircle(center: c, radius: r - 8), math.pi * 1.1, math.pi * 0.55, false, Paint()..style = PaintingStyle.stroke..strokeWidth = 2.2..strokeCap = StrokeCap.round..color = Colors.white.withValues(alpha: 0.35));
   }

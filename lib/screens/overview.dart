@@ -87,12 +87,7 @@ class OverviewScreen extends StatelessWidget {
       AppCard(
         onTap: () => shell.push(const InsightsScreen()),
         child: Row(children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(color: C.primarySoft, borderRadius: BorderRadius.circular(16)),
-            child: Icon(PIconsFill.chartLineUp, color: C.primary, size: 24),
-          ),
+          GlossIcon(PIconsFill.chartLineUp, C.primary, size: 48),
           const SizedBox(width: 14),
           const Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -109,15 +104,14 @@ class OverviewScreen extends StatelessWidget {
 
   // ---------- hero ----------
   Widget _hero(BuildContext context, OverviewStats s) => ClipRRect(
-        borderRadius: BorderRadius.circular(30),
+        borderRadius: BorderRadius.circular(36),
         child: Container(
           decoration: BoxDecoration(
-            gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFF8468FF), Color(0xFF4B2FCB)]),
+            gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: C.gradBlueDeep, stops: [0, 0.55, 1]),
             boxShadow: [BoxShadow(color: C.primary.withValues(alpha: C.dark ? 0.35 : 0.3), blurRadius: 36, offset: const Offset(0, 16))],
           ),
           child: Stack(children: [
-            const Positioned(right: -70, top: -90, child: AmbientGlow(color: Color(0xFFD7CCFF), size: 260)),
-            const Positioned(left: -90, bottom: -120, child: AmbientGlow(color: Color(0xFF2B1A9A), size: 280)),
+            const Positioned.fill(child: PlayPattern()),
             Padding(
               padding: const EdgeInsets.fromLTRB(22, 22, 22, 18),
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -137,11 +131,11 @@ class OverviewScreen extends StatelessWidget {
                   const Spacer(),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-                    decoration: BoxDecoration(color: const Color(0xFF2DD4A0).withValues(alpha: 0.2), borderRadius: BorderRadius.circular(999)),
+                    decoration: BoxDecoration(color: const Color(0xFF1FC9A4).withValues(alpha: 0.2), borderRadius: BorderRadius.circular(999)),
                     child: const Row(mainAxisSize: MainAxisSize.min, children: [
-                      Icon(PIconsBold.trendUp, size: 13, color: Color(0xFF7BF0CB)),
+                      Icon(PIconsBold.trendUp, size: 13, color: Color(0xFF5BE8C6)),
                       SizedBox(width: 4),
-                      Text('+12% this week', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xFF7BF0CB))),
+                      Text('+12% this week', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xFF5BE8C6))),
                     ]),
                   ),
                 ]),
@@ -184,7 +178,7 @@ class OverviewScreen extends StatelessWidget {
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
                         decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(11)),
-                        child: const Text('Copy', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w800, color: Color(0xFF4B2FCB))),
+                        child: const Text('Copy', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w800, color: Color(0xFF0847A0))),
                       ),
                     ),
                   ]),
@@ -198,10 +192,10 @@ class OverviewScreen extends StatelessWidget {
   // ---------- quick actions ----------
   Widget _quickActions(BuildContext context) {
     final items = <(IconData, String, Color, VoidCallback)>[
-      (PIconsFill.chatText, 'SMS', const Color(0xFF2F8FE0), () => showVideoLinkSheet(context)),
-      (PIconsFill.envelopeSimple, 'Email', const Color(0xFFFF9F43), () => showVideoLinkSheet(context)),
-      (PIconsFill.whatsappLogo, 'WhatsApp', const Color(0xFF0FB58A), () => showVideoLinkSheet(context)),
-      (PIconsFill.qrCode, 'QR', const Color(0xFFB265FF), () => shell.goTo(6)),
+      (PIconsFill.chatText, 'SMS', const Color(0xFF3E94F5), () => showVideoLinkSheet(context)),
+      (PIconsFill.envelopeSimple, 'Email', const Color(0xFFFFC21A), () => showVideoLinkSheet(context)),
+      (PIconsFill.whatsappLogo, 'WhatsApp', const Color(0xFF1FC9A4), () => showVideoLinkSheet(context)),
+      (PIconsFill.qrCode, 'QR', const Color(0xFF1FC9A4), () => shell.goTo(6)),
       (PIconsFill.playCircle, 'Preview', C.rec, () => shell.push(const RecordScreen())),
     ];
     return _QuickActions(items: items);
@@ -215,12 +209,7 @@ class OverviewScreen extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
           decoration: BoxDecoration(color: C.surface, borderRadius: BorderRadius.circular(rLg), border: Border.all(color: C.border), boxShadow: C.shadow),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Container(
-              width: 34,
-              height: 34,
-              decoration: BoxDecoration(color: color.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(11)),
-              child: Icon(icon, size: 17, color: color),
-            ),
+            GlossIcon(icon, color, size: 34),
             const SizedBox(height: 12),
             CountUp(value, style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w800, letterSpacing: -1, height: 1)),
             const SizedBox(height: 4),
@@ -333,7 +322,7 @@ class _StoryCard extends StatelessWidget {
               right: 14,
               bottom: 14,
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Row(children: [for (var i = 0; i < 5; i++) Icon(i < video.rating ? PIconsFill.star : PIconsRegular.star, size: 12, color: const Color(0xFFFFD25E))]),
+                Row(children: [for (var i = 0; i < 5; i++) Icon(i < video.rating ? PIconsFill.star : PIconsRegular.star, size: 12, color: const Color(0xFFFFC21A))]),
                 const SizedBox(height: 6),
                 Text(video.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w800, color: Colors.white)),
                 Text(video.job, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w500, color: Colors.white.withValues(alpha: 0.75))),

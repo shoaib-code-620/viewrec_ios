@@ -46,7 +46,7 @@ class InsightsScreen extends StatelessWidget {
                       const SectionHeader('Views per week'),
                       AppCard(
                         child: SizedBox(
-                          height: 170,
+                          height: 190,
                           child: Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
                             for (var i = 0; i < d.weeklyViews.length; i++)
                               Expanded(

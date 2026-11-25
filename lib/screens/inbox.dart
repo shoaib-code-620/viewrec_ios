@@ -83,7 +83,7 @@ class _InboxBodyState extends State<_InboxBody> {
         ..hideCurrentSnackBar()
         ..showSnackBar(SnackBar(
           content: Text('${l.name} closed'),
-          action: SnackBarAction(label: 'Undo', textColor: const Color(0xFFB8A6FF), onPressed: () => _setStatus(l, prev)),
+          action: SnackBarAction(label: 'Undo', textColor: const Color(0xFF8CC3FF), onPressed: () => _setStatus(l, prev)),
           behavior: SnackBarBehavior.floating,
         ));
     }

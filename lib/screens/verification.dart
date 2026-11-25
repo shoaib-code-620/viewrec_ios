@@ -52,7 +52,7 @@ class _VerificationBodyState extends State<_VerificationBody> {
               go();
             },
             child: Column(children: [
-              Container(width: 58, height: 58, decoration: BoxDecoration(color: c.withValues(alpha: 0.14), borderRadius: BorderRadius.circular(20)), child: Icon(icon, color: c, size: 26)),
+              GlossIcon(icon, c, size: 58),
               const SizedBox(height: 8),
               Text(label, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700)),
             ]),
@@ -64,11 +64,11 @@ class _VerificationBodyState extends State<_VerificationBody> {
         const H2('Add a document'),
         const SizedBox(height: 18),
         Row(children: [
-          opt(Icons.photo_camera_rounded, 'Take a photo', const Color(0xFFFF4F9A), () async {
+          opt(Icons.photo_camera_rounded, 'Take a photo', const Color(0xFFFF6B5E), () async {
             final f = await ImagePicker().pickImage(source: ImageSource.camera, imageQuality: 88);
             if (f != null) await _send(f.name, f.path);
           }),
-          opt(Icons.insert_drive_file_rounded, 'Choose a file', const Color(0xFFFFB84D), () async {
+          opt(Icons.insert_drive_file_rounded, 'Choose a file', const Color(0xFFFFC21A), () async {
             final f = await FilePicker.pickFile();
             if (f != null && f.path != null) await _send(f.name, f.path!);
           }),

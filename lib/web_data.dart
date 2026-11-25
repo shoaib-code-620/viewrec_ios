@@ -41,6 +41,19 @@ class GalleryItem {
 const kGalleryFileLimit = 100 * 1024 * 1024; // 100 MB a file
 const kGalleryTotalLimit = 2 * 1024 * 1024 * 1024; // 2 GB a business
 
+/// One line of subtitles: shown from [startMs] to [endMs].
+class CaptionLine {
+  int startMs, endMs;
+  String text;
+  CaptionLine({required this.startMs, required this.endMs, required this.text});
+  factory CaptionLine.fromJson(Map<String, dynamic> j) => CaptionLine(
+        startMs: (j['startMs'] ?? 0).toInt(),
+        endMs: (j['endMs'] ?? 0).toInt(),
+        text: j['text'] ?? '',
+      );
+  Map<String, dynamic> toJson() => {'startMs': startMs, 'endMs': endMs, 'text': text};
+}
+
 class Bundle {
   final String id;
   String name;
@@ -190,6 +203,10 @@ abstract class WebRepo {
   Future<GalleryFolder> createGalleryFolder(String name);
 
   Future<List<Bundle>> bundles();
+  /// Turn the speech in a recorded video into timed caption lines. [script] is the planned wording, if any.
+  Future<List<CaptionLine>> transcribeVideo(String path, {required int durationMs, String script = ''});
+  /// Write a short video script with AI. [tone] is friendly, professional or punchy.
+  Future<String> writeScript({required String topic, String tone = 'friendly', String business = ''});
   Future<Bundle> saveBundle({String? id, required String name, required List<String> memberIds});
   Future<void> deleteBundle(String id);
   Future<void> sendBundle(String id, {required String subject, required String body});
@@ -228,6 +245,9 @@ abstract class WebRepo {
   Future<void> setTwoFactor(bool on);
   Future<void> revokeDevice(String id);
   Future<void> signOutOtherDevices();
+  Future<void> changePassword({required String current, required String next});
+  Future<void> requestDataExport();
+  Future<void> requestAccountDeletion();
 
   Future<List<Workspace>> workspaces();
   Future<void> switchWorkspace(String id);
@@ -292,6 +312,29 @@ class MockWebRepo implements WebRepo {
   ];
   @override
   Future<List<Bundle>> bundles() => _w(List.of(_bundles));
+
+  @override
+  Future<List<CaptionLine>> transcribeVideo(String path, {required int durationMs, String script = ''}) async {
+    final text = script.trim().isEmpty
+        ? 'Hi, I am so glad you stopped by. We have been helping local families for years. Every job is done properly, on time. Message us today for a free quote.'
+        : script.trim();
+    final parts = text.split(RegExp(r'(?<=[.!?])\s+')).where((s) => s.trim().isNotEmpty).toList();
+    final total = durationMs <= 0 ? parts.length * 3000 : durationMs;
+    final each = total ~/ parts.length;
+    return _w([for (var i = 0; i < parts.length; i++) CaptionLine(startMs: i * each, endMs: (i + 1) * each, text: parts[i].trim())]);
+  }
+
+  @override
+  Future<String> writeScript({required String topic, String tone = 'friendly', String business = ''}) async {
+    final who = business.isEmpty ? 'our team' : business;
+    final t = topic.trim().isEmpty ? 'what we do' : topic.trim();
+    final text = switch (tone) {
+      'professional' => 'Hello, and thank you for watching. At $who we specialise in $t. Our work is carried out to a high standard, with clear pricing and no surprises. Contact us today to arrange a free consultation.',
+      'punchy' => 'Need $t? We have got you. Fast. Fair. Done right. Message $who today.',
+      _ => 'Hi there! Quick hello from $who. If you are thinking about $t, we would love to help. We keep things simple, honest and friendly. Drop us a message and we will sort you out.',
+    };
+    return _w(text);
+  }
   @override
   Future<Bundle> saveBundle({String? id, required String name, required List<String> memberIds}) async {
     if (id != null) {
@@ -496,6 +539,18 @@ class MockWebRepo implements WebRepo {
     const SignedInDevice(id: 'd3', device: 'Safari on iPhone', place: 'Leeds, UK', when: '5 days ago'),
   ]);
   @override
+  Future<void> changePassword({required String current, required String next}) async {
+    if (current.isEmpty) throw Exception('Enter your current password');
+    await _w(null);
+  }
+
+  @override
+  Future<void> requestDataExport() => _w(null);
+
+  @override
+  Future<void> requestAccountDeletion() => _w(null);
+
+  @override
   Future<SecurityInfo> security() => _w(_sec);
   @override
   Future<void> setTwoFactor(bool on) async {
@@ -545,12 +600,11 @@ class ApiWebRepo implements WebRepo {
   final String base;
   ApiWebRepo(this.base);
   static const _timeout = Duration(seconds: 12);
-  static const _json = {'Content-Type': 'application/json'};
 
   Uri _u(String p) => Uri.parse('$base$p');
 
   Future<dynamic> _call(String method, String p, [Map<String, dynamic>? body]) async {
-    final req = http.Request(method, _u(p))..headers.addAll(_json);
+    final req = http.Request(method, _u(p))..headers.addAll(ApiAuth.headers(json: true));
     if (body != null) req.body = jsonEncode(body);
     final r = await http.Response.fromStream(await req.send().timeout(_timeout));
     if (r.statusCode >= 400) {
@@ -572,6 +626,7 @@ class ApiWebRepo implements WebRepo {
   @override
   Future<GalleryItem> addGalleryItem({required String name, required String kind, required int bytes, required String path, String? folderId}) async {
     final req = http.MultipartRequest('POST', _u('/api/v1/gallery/upload'))
+      ..headers.addAll(ApiAuth.headers())
       ..fields['kind'] = kind
       ..fields['folderId'] = folderId ?? ''
       ..files.add(await http.MultipartFile.fromPath('file', path, filename: name));
@@ -590,6 +645,25 @@ class ApiWebRepo implements WebRepo {
 
   @override
   Future<List<Bundle>> bundles() async => _list(await _call('GET', '/api/v1/bundles'), Bundle.fromJson);
+
+  @override
+  Future<List<CaptionLine>> transcribeVideo(String path, {required int durationMs, String script = ''}) async {
+    final req = http.MultipartRequest('POST', _u('/api/v1/ai/transcribe'))
+      ..headers.addAll(ApiAuth.headers())
+      ..fields['durationMs'] = '$durationMs'
+      ..fields['script'] = script
+      ..files.add(await http.MultipartFile.fromPath('file', path));
+    final res = await req.send().timeout(const Duration(minutes: 5));
+    final body = await res.stream.bytesToString();
+    if (res.statusCode >= 400) throw Exception('Could not make captions (${res.statusCode})');
+    return _list(jsonDecode(body), CaptionLine.fromJson);
+  }
+
+  @override
+  Future<String> writeScript({required String topic, String tone = 'friendly', String business = ''}) async {
+    final j = await _call('POST', '/api/v1/ai/script', {'topic': topic, 'tone': tone, 'business': business});
+    return (j is Map ? j['script'] : j).toString();
+  }
   @override
   Future<Bundle> saveBundle({String? id, required String name, required List<String> memberIds}) async =>
       Bundle.fromJson(await _call(id == null ? 'POST' : 'PUT', id == null ? '/api/v1/bundles' : '/api/v1/bundles/$id', {'name': name, 'memberIds': memberIds}));
@@ -615,7 +689,8 @@ class ApiWebRepo implements WebRepo {
   Future<Verification> verification() async => Verification.fromJson(await _call('GET', '/api/v1/verification'));
   @override
   Future<Verification> uploadVerificationDoc({required String name, required String path}) async {
-    final req = http.MultipartRequest('POST', _u('/api/v1/verification/documents'))..files.add(await http.MultipartFile.fromPath('file', path, filename: name));
+    final req = http.MultipartRequest('POST', _u('/api/v1/verification/documents'))
+      ..headers.addAll(ApiAuth.headers())..files.add(await http.MultipartFile.fromPath('file', path, filename: name));
     final res = await req.send().timeout(const Duration(minutes: 3));
     final body = await res.stream.bytesToString();
     if (res.statusCode >= 400) throw Exception('Upload failed (${res.statusCode})');
@@ -650,6 +725,7 @@ class ApiWebRepo implements WebRepo {
   @override
   Future<ThreadMessage> sendSupportAttachment({required String kind, required String path, required String name, int size = 0, int durationMs = 0, void Function(double)? onProgress}) async {
     final req = http.MultipartRequest('POST', _u('/api/v1/support/thread/attachment'))
+      ..headers.addAll(ApiAuth.headers())
       ..fields['kind'] = kind
       ..fields['durationMs'] = '$durationMs'
       ..files.add(await http.MultipartFile.fromPath('file', path, filename: name));
@@ -665,6 +741,13 @@ class ApiWebRepo implements WebRepo {
   @override
   Future<void> deleteSupportMessage(String messageId) => _call('DELETE', '/api/v1/support/thread/messages/$messageId');
 
+  @override
+  Future<void> changePassword({required String current, required String next}) =>
+      _call('POST', '/api/v1/auth/password', {'currentPassword': current, 'newPassword': next});
+  @override
+  Future<void> requestDataExport() => _call('POST', '/api/v1/account/export');
+  @override
+  Future<void> requestAccountDeletion() => _call('POST', '/api/v1/account/delete');
   @override
   Future<SecurityInfo> security() async => SecurityInfo.fromJson(await _call('GET', '/api/v1/security'));
   @override

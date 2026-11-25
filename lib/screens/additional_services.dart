@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../liquid_widgets.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import 'verification.dart';
 
 class AdditionalServicesScreen extends StatelessWidget {
   const AdditionalServicesScreen({super.key});
@@ -14,6 +15,7 @@ class AdditionalServicesScreen extends StatelessWidget {
       (Icons.card_giftcard_rounded, 'Customer rewards', 'Loyalty rewards and discount coupons for customers who review you', C.amber, const RewardsScreen()),
       (Icons.campaign_rounded, 'Ads management', 'We run your Google, Meta and Local Services ads', C.blue, const ManagedServicesScreen()),
       (Icons.support_agent_rounded, 'Your own agent', 'An agent available around the clock', C.green, const ManagedServicesScreen()),
+      (Icons.verified_user_rounded, 'Verification', 'Get your blue tick so you can post your own photos and videos', C.blue, const _VerificationPage()),
       (Icons.verified_rounded, 'Business profiles', 'We keep your Google and social profiles active', C.primary, const ManagedServicesScreen()),
       (Icons.people_alt_rounded, 'Referral credit', 'Earn credit for businesses you bring', C.rec, const ReferralsScreen()),
       (Icons.call_rounded, 'Talk to our team', 'Book a setup call', C.primary, const TalkToTeamScreen()),
@@ -27,12 +29,7 @@ class AdditionalServicesScreen extends StatelessWidget {
           child: AppCard(
             onTap: () => _go(context, i.$5),
             child: Row(children: [
-              Container(
-                width: 46,
-                height: 46,
-                decoration: BoxDecoration(color: i.$4.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(14)),
-                child: Icon(i.$1, color: i.$4),
-              ),
+              GlossIcon(i.$1, i.$4, size: 46),
               const SizedBox(width: 14),
               Expanded(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -48,6 +45,24 @@ class AdditionalServicesScreen extends StatelessWidget {
       const SizedBox(height: 80),
     ]);
   }
+}
+
+/// The verification screen on its own page, for when it is opened from this list.
+class _VerificationPage extends StatelessWidget {
+  const _VerificationPage();
+  @override
+  Widget build(BuildContext context) => Scaffold(
+        body: Stack(children: [
+          const Positioned.fill(child: LiquidBackdrop()),
+          SafeArea(
+            bottom: false,
+            child: Column(children: [
+              const Padding(padding: EdgeInsets.fromLTRB(16, 12, 16, 0), child: BackHeader('Verification')),
+              const Expanded(child: VerificationScreen()),
+            ]),
+          ),
+        ]),
+      );
 }
 
 class RewardsScreen extends StatefulWidget {

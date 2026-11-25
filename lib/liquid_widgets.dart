@@ -51,10 +51,11 @@ class _BackdropPainter extends CustomPainter {
       canvas.drawCircle(c, r, Paint()..shader = RadialGradient(colors: [color.withValues(alpha: alpha), color.withValues(alpha: 0)]).createShader(rect));
     }
 
-    final k = dark ? 1.0 : 0.7;
-    pool(Offset(w * (0.82 + 0.10 * math.sin(a)), h * (0.08 + 0.05 * math.cos(a * 1.3))), w * 0.85, C.primary, 0.20 * k);
-    pool(Offset(w * (0.05 + 0.10 * math.cos(a * 0.8)), h * (0.50 + 0.08 * math.sin(a))), w * 0.80, C.blue, 0.13 * k);
-    pool(Offset(w * (0.70 + 0.12 * math.sin(a * 1.1 + 1)), h * (0.92 + 0.04 * math.cos(a))), w * 0.75, const Color(0xFFD25CFF), 0.10 * k);
+    // The design's soft glows: teal at the top right, yellow on the left, coral at the bottom right.
+    final k = dark ? 0.55 : 1.0;
+    pool(Offset(w * (1.0 + 0.06 * math.sin(a)), h * (0.10 + 0.04 * math.cos(a * 1.3))), w * 0.80, const Color(0xFF3DE0BC), 0.18 * k);
+    pool(Offset(w * (0.0 + 0.06 * math.cos(a * 0.8)), h * (0.46 + 0.06 * math.sin(a))), w * 0.78, const Color(0xFFFFC21A), 0.18 * k);
+    pool(Offset(w * (1.0 + 0.05 * math.sin(a * 1.1 + 1)), h * (0.80 + 0.04 * math.cos(a))), w * 0.75, const Color(0xFFFF6B5E), 0.14 * k);
   }
 
   @override
@@ -328,7 +329,7 @@ class _LiquidPillsState extends State<LiquidPills> with SingleTickerProviderStat
                     child: DecoratedBox(
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(999),
-                        gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFF9378FF), Color(0xFF6A4CF0)]),
+                        gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFF3E94F5), Color(0xFF0B5FC4)]),
                         boxShadow: [BoxShadow(color: C.primary.withValues(alpha: 0.35), blurRadius: 14, offset: const Offset(0, 5))],
                       ),
                     ),
@@ -345,7 +346,7 @@ class _LiquidPillsState extends State<LiquidPills> with SingleTickerProviderStat
                     color: Colors.transparent,
                     child: AnimatedDefaultTextStyle(
                       duration: const Duration(milliseconds: 400),
-                      style: TextStyle(fontFamily: 'Manrope', fontSize: 13, fontWeight: FontWeight.w700, color: i == widget.index ? Colors.white : C.muted),
+                      style: TextStyle(fontFamily: 'PlusJakartaSans', fontSize: 13, fontWeight: FontWeight.w700, color: i == widget.index ? Colors.white : C.muted),
                       child: Text(widget.labels[i]),
                     ),
                   ),

@@ -26,10 +26,10 @@ class _Avatar {
 
 const _avatars = [
   _Avatar('fox', 'Fox', Icons.pets_rounded, Color(0xFFFF8A3D)),
-  _Avatar('owl', 'Owl', Icons.nightlight_round_rounded, Color(0xFF7C5CFF)),
+  _Avatar('owl', 'Owl', Icons.nightlight_round_rounded, Color(0xFF0B5FC4)),
   _Avatar('bear', 'Bear', Icons.emoji_nature_rounded, Color(0xFF8D6E63)),
-  _Avatar('robot', 'Robot', Icons.smart_toy_rounded, Color(0xFF2F8FE0)),
-  _Avatar('star', 'Star', Icons.auto_awesome_rounded, Color(0xFFE0A100)),
+  _Avatar('robot', 'Robot', Icons.smart_toy_rounded, Color(0xFF3E94F5)),
+  _Avatar('star', 'Star', Icons.auto_awesome_rounded, Color(0xFFF2A100)),
   _Avatar('leaf', 'Leaf', Icons.eco_rounded, Color(0xFF0F9F78)),
 ];
 
@@ -625,7 +625,7 @@ class _RecordScreenState extends State<RecordScreen> {
                   margin: const EdgeInsets.only(bottom: 24),
                   decoration: BoxDecoration(color: const Color(0xB80A0A12), borderRadius: BorderRadius.circular(rLg)),
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    const Text('JUST READ THIS', style: TextStyle(color: Color(0xFF8E8EA8), fontSize: 11, letterSpacing: 1.4, fontWeight: FontWeight.w700)),
+                    const Text('JUST READ THIS', style: TextStyle(color: Color(0xFF8A9BB8), fontSize: 11, letterSpacing: 1.4, fontWeight: FontWeight.w700)),
                     const SizedBox(height: 8),
                     for (var i = 0; i < script.length; i++)
                       Text(script[i],

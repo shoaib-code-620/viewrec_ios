@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../data.dart';
 import '../theme.dart';
 import '../widgets.dart';
@@ -34,8 +36,19 @@ class _LinkBox extends StatelessWidget {
         decoration: BoxDecoration(color: C.surface2, borderRadius: BorderRadius.circular(rMd)),
         child: Row(children: [
           Expanded(child: Text(link, style: const TextStyle(fontFamily: 'monospace', fontSize: 12.5), overflow: TextOverflow.ellipsis)),
-          IconButton(icon: const Icon(Icons.copy_rounded, size: 18), onPressed: () => showMsg(context, 'Copied')),
-          IconButton(icon: const Icon(Icons.open_in_new_rounded, size: 18), onPressed: () {}),
+          IconButton(icon: const Icon(Icons.copy_rounded, size: 18), onPressed: () {
+            Clipboard.setData(ClipboardData(text: link));
+            showMsg(context, 'Link copied');
+          }),
+          IconButton(
+            icon: const Icon(Icons.open_in_new_rounded, size: 18),
+            onPressed: () async {
+              final u = Uri.tryParse(link.startsWith('http') ? link : 'https://$link');
+              if (u == null || !await launchUrl(u, mode: LaunchMode.externalApplication)) {
+                if (context.mounted) showMsg(context, "Couldn't open the link");
+              }
+            },
+          ),
         ]),
       );
 }
@@ -60,7 +73,7 @@ class _ReviewPageState extends State<_ReviewPage> {
           Container(
             height: 90,
             decoration: const BoxDecoration(
-              gradient: LinearGradient(colors: [Color(0xFF3A2A8C), Color(0xFF6A4CF0)]),
+              gradient: LinearGradient(colors: [Color(0xFF3A2A8C), Color(0xFF0B5FC4)]),
               borderRadius: BorderRadius.vertical(top: Radius.circular(rLg)),
             ),
           ),
@@ -161,7 +174,7 @@ class _ListingState extends State<_Listing> {
             const Tile(icon: Icons.category_rounded, title: 'Category', subtitle: 'Home & Trades'),
             const Tile(icon: Icons.place_rounded, title: 'Service area', subtitle: 'Greater Manchester · 25 miles'),
             const Tile(icon: Icons.schedule_rounded, title: 'Opening hours', subtitle: 'Mon–Fri 8:00–18:00'),
-            Tile(icon: Icons.workspace_premium_rounded, title: 'Pro badge', subtitle: 'Shown on Pro and above', iconColor: C.amber, divider: false, onTap: () {}),
+            Tile(icon: Icons.workspace_premium_rounded, title: 'Pro badge', subtitle: 'Shown on Pro and above', iconColor: C.amber, divider: false, onTap: () => showMsg(context, 'The Pro badge appears on your public page automatically')),
           ]),
         ),
         const SizedBox(height: 14),

@@ -373,12 +373,7 @@ class _ConversationBodyState extends State<ConversationBody> with WidgetsBinding
               onTap();
             },
             child: Column(children: [
-              Container(
-                width: 58,
-                height: 58,
-                decoration: BoxDecoration(color: color.withValues(alpha: 0.14), borderRadius: BorderRadius.circular(20)),
-                child: Icon(icon, color: color, size: 26),
-              ),
+              GlossIcon(icon, color, size: 58),
               const SizedBox(height: 8),
               Text(label, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700)),
             ]),
@@ -392,9 +387,9 @@ class _ConversationBodyState extends State<ConversationBody> with WidgetsBinding
         const Muted('Send a photo, a document or a video.', size: 13),
         const SizedBox(height: 18),
         Row(children: [
-          option(Icons.photo_library_rounded, 'Photo or video', const Color(0xFF2F8FE0), _pickMedia),
-          option(Icons.photo_camera_rounded, 'Camera', const Color(0xFFFF4F9A), _pickCamera),
-          option(Icons.insert_drive_file_rounded, 'File', const Color(0xFFFFB84D), _pickFile),
+          option(Icons.photo_library_rounded, 'Photo or video', const Color(0xFF3E94F5), _pickMedia),
+          option(Icons.photo_camera_rounded, 'Camera', const Color(0xFFFF6B5E), _pickCamera),
+          option(Icons.insert_drive_file_rounded, 'File', const Color(0xFFFFC21A), _pickFile),
         ]),
         const SizedBox(height: 8),
       ]),
@@ -516,7 +511,7 @@ class _ConversationBodyState extends State<ConversationBody> with WidgetsBinding
       case 'failed':
         return GestureDetector(
           onTap: () => _deliver(m),
-          child: const Icon(Icons.error_rounded, size: 16, color: Color(0xFFFF8A9B)),
+          child: const Icon(Icons.error_rounded, size: 16, color: Color(0xFFFF9D92)),
         );
       default: // sent
         return const Icon(Icons.done_rounded, size: 15, color: Colors.white70);
@@ -564,12 +559,7 @@ class _ConversationBodyState extends State<ConversationBody> with WidgetsBinding
         );
       case 'file':
         content = Row(mainAxisSize: MainAxisSize.min, children: [
-          Container(
-            width: 42,
-            height: 42,
-            decoration: BoxDecoration(color: (mine ? Colors.white : C.primary).withValues(alpha: 0.18), borderRadius: BorderRadius.circular(12)),
-            child: Icon(_fileIcon(m.fileName), color: mine ? Colors.white : C.primary, size: 22),
-          ),
+          GlossIcon(_fileIcon(m.fileName), (mine ? const Color(0xFF6FB0FF) : C.primary), size: 42),
           const SizedBox(width: 10),
           Flexible(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -590,9 +580,11 @@ class _ConversationBodyState extends State<ConversationBody> with WidgetsBinding
         margin: const EdgeInsets.only(bottom: 10),
         padding: EdgeInsets.symmetric(horizontal: m.kind == 'image' ? 6 : 14, vertical: m.kind == 'image' ? 6 : 10),
         decoration: BoxDecoration(
-          color: mine ? C.primary : C.surface,
-          border: mine ? null : Border.all(color: C.border),
+          gradient: mine ? const LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: C.gradBlue) : null,
+          color: mine ? null : C.surface,
+          border: Border.all(color: mine ? Colors.white.withValues(alpha: 0.3) : (C.dark ? C.border : Colors.white)),
           borderRadius: radius,
+          boxShadow: [BoxShadow(color: (mine ? C.primary : const Color(0xFF0B1B3A)).withValues(alpha: mine ? 0.22 : 0.07), blurRadius: 12, offset: const Offset(0, 4))],
         ),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           content,
@@ -601,7 +593,7 @@ class _ConversationBodyState extends State<ConversationBody> with WidgetsBinding
             padding: EdgeInsets.symmetric(horizontal: m.kind == 'image' ? 6 : 0),
             child: Row(mainAxisSize: MainAxisSize.min, children: [
               if (m.edited) Text('edited  ', style: TextStyle(fontSize: 10.5, fontStyle: FontStyle.italic, color: sub)),
-              Text(m.status == 'failed' ? 'Not sent' : m.when, style: TextStyle(fontSize: 10.5, color: m.status == 'failed' ? const Color(0xFFFF8A9B) : sub)),
+              Text(m.status == 'failed' ? 'Not sent' : m.when, style: TextStyle(fontSize: 10.5, color: m.status == 'failed' ? const Color(0xFFFF9D92) : sub)),
               if (mine) ...[const SizedBox(width: 5), AnimatedSwitcher(duration: const Duration(milliseconds: 260), child: KeyedSubtree(key: ValueKey(m.status), child: _ticks(m)))],
             ]),
           ),
@@ -665,7 +657,7 @@ class _ConversationBodyState extends State<ConversationBody> with WidgetsBinding
       padding: const EdgeInsets.symmetric(horizontal: 14),
       decoration: BoxDecoration(color: C.bg, borderRadius: BorderRadius.circular(999)),
       child: Row(children: [
-        Container(width: 10, height: 10, decoration: const BoxDecoration(color: Color(0xFFFF3B5C), shape: BoxShape.circle))
+        Container(width: 10, height: 10, decoration: const BoxDecoration(color: Color(0xFFE4513F), shape: BoxShape.circle))
             .animate(onPlay: (c) => c.repeat(reverse: true))
             .fade(begin: 0.35, end: 1, duration: 700.ms),
         const SizedBox(width: 10),
@@ -749,7 +741,7 @@ class _ConversationBodyState extends State<ConversationBody> with WidgetsBinding
           decoration: BoxDecoration(color: C.surface, border: Border(top: BorderSide(color: C.border))),
           child: Row(children: [
             if (recording)
-              _roundButton(icon: Icons.delete_outline_rounded, onTap: _cancelVoice, color: C.surface2, iconColor: const Color(0xFFFF3B5C))
+              _roundButton(icon: Icons.delete_outline_rounded, onTap: _cancelVoice, color: C.surface2, iconColor: const Color(0xFFE4513F))
             else
               _roundButton(icon: Icons.attach_file_rounded, onTap: editing != null ? null : _attach, color: C.surface2, iconColor: C.text),
             const SizedBox(width: 8),

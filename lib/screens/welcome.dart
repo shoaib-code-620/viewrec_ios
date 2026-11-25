@@ -28,17 +28,8 @@ class WelcomeScreen extends StatelessWidget {
         SafeArea(
           child: ListView(padding: const EdgeInsets.fromLTRB(24, 12, 24, 40), children: [
             Row(children: [
-              Container(
-                width: 38,
-                height: 38,
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFF9378FF), Color(0xFF6A4CF0)]),
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: C.glow,
-                ),
-                child: const Icon(PIconsFill.chatCircleDots, size: 20, color: Colors.white),
-              ),
-              const SizedBox(width: 11),
+              const BrandMark(size: 44),
+              const SizedBox(width: 8),
               const Text('ViewRec', style: TextStyle(fontSize: 21, fontWeight: FontWeight.w800, letterSpacing: -0.6)),
             ]).reveal(context, 0),
             const SizedBox(height: 30),
@@ -80,9 +71,6 @@ class WelcomeScreen extends StatelessWidget {
             AppButton('Get started for \$1', icon: PIconsBold.arrowRight, onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const StartTrialScreen()))).reveal(context, 14),
             const SizedBox(height: 12),
             AppButton('Sign in', style: BtnStyle.ghost, onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SignInScreen()))).reveal(context, 15),
-            const SizedBox(height: 18),
-            const Muted('\$1 starts your first 15 days. After that it is \$49. No card needed today - an activation agent calls before anything starts.', size: 12, align: TextAlign.center)
-                .reveal(context, 16),
           ]),
         ),
       ]),
@@ -264,7 +252,7 @@ class _PhoneMockState extends State<_PhoneMock> with TickerProviderStateMixin {
               padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(22), border: Border.all(color: Colors.white.withValues(alpha: 0.08))),
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                const Text('JUST READ THIS', style: TextStyle(fontSize: 10, letterSpacing: 1.6, fontWeight: FontWeight.w800, color: Color(0xFF8D8DA8))),
+                const Text('JUST READ THIS', style: TextStyle(fontSize: 10, letterSpacing: 1.6, fontWeight: FontWeight.w800, color: Color(0xFF8A9BB8))),
                 const SizedBox(height: 10),
                 for (var i = 0; i < _lines.length; i++)
                   Padding(
@@ -272,7 +260,7 @@ class _PhoneMockState extends State<_PhoneMock> with TickerProviderStateMixin {
                     child: AnimatedDefaultTextStyle(
                       duration: const Duration(milliseconds: 450),
                       curve: Curves.easeOut,
-                      style: TextStyle(fontFamily: 'Manrope', fontSize: i == _line ? 17 : 15, height: 1.35, fontWeight: i == _line ? FontWeight.w800 : FontWeight.w500, color: i == _line ? Colors.white : Colors.white.withValues(alpha: 0.38)),
+                      style: TextStyle(fontFamily: 'PlusJakartaSans', fontSize: i == _line ? 17 : 15, height: 1.35, fontWeight: i == _line ? FontWeight.w800 : FontWeight.w500, color: i == _line ? Colors.white : Colors.white.withValues(alpha: 0.38)),
                       child: Text(_lines[i]),
                     ),
                   ),

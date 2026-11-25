@@ -5,9 +5,12 @@ import 'package:viewrec/data.dart';
 import 'package:viewrec/media_data.dart';
 import 'package:viewrec/models.dart';
 import 'package:viewrec/screens/inbox.dart';
+import 'package:viewrec/screens/media_profile.dart';
 import 'package:viewrec/screens/media_viewers.dart';
 import 'package:viewrec/screens/additional_services.dart';
 import 'package:viewrec/screens/assistant.dart';
+import 'package:viewrec/screens/caption_studio.dart';
+import 'package:viewrec/screens/settings_extra.dart';
 import 'package:viewrec/screens/contact_detail.dart';
 import 'package:viewrec/screens/help.dart';
 import 'package:viewrec/screens/import.dart';
@@ -60,6 +63,14 @@ final screens = <String, Widget Function()>{
   'Security': () => const Shell(initialIndex: 25),
   'Marketing email': () => const Shell(initialIndex: 26),
   'Workspaces': () => const Shell(initialIndex: 27),
+  'Business profile public': () => const PublicProfileScreen(businessId: 'b1'),
+  'Followers list': () => const FollowListScreen(businessId: 'b1', name: 'Brightside Dental'),
+  'Following list': () => const FollowListScreen(businessId: 'b1', name: 'Brightside Dental', initialTab: 1),
+  'Blocked accounts': () => const BlockedAccountsScreen(),
+  'Caption studio': () => const CaptionStudioScreen(),
+  'Language and region': () => const LanguageRegionScreen(),
+  'Password and sign-in': () => const PasswordSignInScreen(),
+  'Data and privacy': () => const DataPrivacyScreen(),
   'Insights': () => const InsightsScreen(),
   'Pricing': () => const PricingScreen(),
   'Invite composer': () => const InviteComposerScreen(to: 'Sarah Mitchell'),

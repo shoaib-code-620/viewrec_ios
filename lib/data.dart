@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 
 class Customer {
-  final String id, name, job, date, reason;
+  final String id, date, reason;
+  String name, job;
   /// Mobile number, if known. Needed to call them.
-  final String phone;
+  String phone;
   String status; // suggested | approved | invited | recorded | skipped
   Customer({
     this.phone = '',
@@ -75,7 +76,7 @@ List<Customer> demoCustomers() => [
     ];
 
 List<Video> demoVideos() => [
-      Video(id: 'v1', name: 'Lena Fischer', job: 'Skylight install', duration: '1:48', quote: 'They turned up when they said they would, cleaned up after themselves, and the roof has been perfect since.', status: 'pending', views: 0, hue: const Color(0xFF3B2A6B), platforms: []),
+      Video(id: 'v1', name: 'Lena Fischer', job: 'Skylight install', duration: '1:48', quote: 'They turned up when they said they would, cleaned up after themselves, and the roof has been perfect since.', status: 'pending', views: 0, hue: const Color(0xFF0A2E66), platforms: []),
       Video(id: 'v2', name: 'Priya Nair', job: 'Full re-roof', duration: '2:03', quote: 'Honestly the easiest builder I have ever dealt with. Fixed price, no surprises.', status: 'published', views: 1243, hue: const Color(0xFF1F4A5C), platforms: ['Google', 'Website', 'Facebook']),
       Video(id: 'v3', name: 'James Carter', job: 'Gutter replacement', duration: '1:32', quote: 'Quick, tidy and fair. I told my whole street about them.', status: 'approved', views: 312, hue: const Color(0xFF5C2A3B), platforms: ['Website']),
       Video(id: 'v4', name: 'Aisha Rahman', job: 'Flat roof repair', duration: '1:55', quote: 'Three other firms never called back. These guys fixed the leak in a day.', status: 'published', views: 874, hue: const Color(0xFF2A5C3F), platforms: ['Instagram', 'YouTube']),

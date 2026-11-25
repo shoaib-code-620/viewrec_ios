@@ -18,7 +18,7 @@ import 'edit_filters.dart';
 Future<XFile?> editVideo(BuildContext context, XFile src) => Navigator.of(context).push<XFile>(MaterialPageRoute(fullscreenDialog: true, builder: (_) => VideoEditorScreen(source: src)));
 
 const _bg = Color(0xFF0B0B12);
-const _panel = Color(0xFF14141F);
+const _panel = Color(0xFF0E1B33);
 
 /// One piece of video on the timeline.
 class _Clip {
@@ -395,7 +395,7 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> {
     }
   }
 
-  static const _palette = [0xFFFFFFFF, 0xFF111111, 0xFFFFD25E, 0xFFFF4F9A, 0xFF5BC0FF, 0xFF6EE7A8];
+  static const _palette = [0xFFFFFFFF, 0xFF111111, 0xFFFFC21A, 0xFFFF6B5E, 0xFF5BC0FF, 0xFF6EE7A8];
 
   Widget _colorRow(int current, ValueChanged<int> onPick) => Row(mainAxisAlignment: MainAxisAlignment.center, children: [
         for (final c in _palette)
@@ -696,7 +696,7 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> {
                   height: 28,
                   margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
                   padding: const EdgeInsets.symmetric(horizontal: 10),
-                  decoration: BoxDecoration(gradient: const LinearGradient(colors: [Color(0xFF7C3AED), Color(0xFFB265FF)]), borderRadius: BorderRadius.circular(9)),
+                  decoration: BoxDecoration(gradient: const LinearGradient(colors: [Color(0xFF3E94F5), Color(0xFF1FC9A4)]), borderRadius: BorderRadius.circular(9)),
                   child: Row(children: [
                     MusicBars(active: playing, height: 13),
                     const SizedBox(width: 8),
@@ -817,7 +817,7 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> {
     }
     return Column(mainAxisSize: MainAxisSize.min, children: [
       Row(children: [
-        const Icon(Icons.music_note_rounded, color: Color(0xFFB265FF), size: 20),
+        const Icon(Icons.music_note_rounded, color: Color(0xFF1FC9A4), size: 20),
         const SizedBox(width: 8),
         Expanded(child: Text(m.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13.5))),
         TextButton(onPressed: _pickMusic, child: const Text('Change')),
@@ -845,7 +845,7 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> {
         values: RangeValues(m.startMs.toDouble(), m.endMs.toDouble()),
         min: 0,
         max: m.durMs.toDouble(),
-        activeColor: const Color(0xFFB265FF),
+        activeColor: const Color(0xFF1FC9A4),
         onChanged: (v) {
           if (v.end - v.start < 1000) return;
           setState(() {
@@ -957,7 +957,7 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> {
                     onTap: ready && !exporting ? _export : null,
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 9),
-                      decoration: BoxDecoration(gradient: const LinearGradient(colors: [Color(0xFF9378FF), Color(0xFF6A4CF0)]), borderRadius: BorderRadius.circular(999), boxShadow: C.glow),
+                      decoration: BoxDecoration(gradient: const LinearGradient(colors: [Color(0xFF3E94F5), Color(0xFF0B5FC4)]), borderRadius: BorderRadius.circular(999), boxShadow: C.glow),
                       child: const Text('Done', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800)),
                     ),
                   ),

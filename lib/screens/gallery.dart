@@ -73,7 +73,7 @@ class _GalleryBodyState extends State<_GalleryBody> {
               go();
             },
             child: Column(children: [
-              Container(width: 58, height: 58, decoration: BoxDecoration(color: c.withValues(alpha: 0.14), borderRadius: BorderRadius.circular(20)), child: Icon(icon, color: c, size: 26)),
+              GlossIcon(icon, c, size: 58),
               const SizedBox(height: 8),
               Text(label, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700)),
             ]),
@@ -87,11 +87,11 @@ class _GalleryBodyState extends State<_GalleryBody> {
         const Muted('Up to 100 MB a file, 2 GB in all.', size: 13),
         const SizedBox(height: 18),
         Row(children: [
-          opt(Icons.photo_library_rounded, 'Photo or video', const Color(0xFF2F8FE0), () async {
+          opt(Icons.photo_library_rounded, 'Photo or video', const Color(0xFF3E94F5), () async {
             final f = await ImagePicker().pickMedia();
             if (f != null) await _add(f.name, f.path, await f.length());
           }),
-          opt(Icons.insert_drive_file_rounded, 'Document', const Color(0xFFFFB84D), () async {
+          opt(Icons.insert_drive_file_rounded, 'Document', const Color(0xFFFFC21A), () async {
             final f = await FilePicker.pickFile();
             if (f != null && f.path != null) await _add(f.name, f.path!, (await f.length()) ?? 0);
           }),
@@ -158,7 +158,7 @@ class _GalleryBodyState extends State<_GalleryBody> {
   }
 
   Widget _thumb(GalleryItem it) {
-    final colors = switch (it.kind) { 'video' => [const Color(0xFF3B2A6B), const Color(0xFF7C5CFF)], 'image' => [const Color(0xFF0F9F78), const Color(0xFF2DD4A0)], _ => [const Color(0xFFE08A00), const Color(0xFFFFB84D)] };
+    final colors = switch (it.kind) { 'video' => [const Color(0xFF0A2E66), const Color(0xFF0B5FC4)], 'image' => [const Color(0xFF0F9F78), const Color(0xFF1FC9A4)], _ => [const Color(0xFFF2A100), const Color(0xFFFFC21A)] };
     final icon = switch (it.kind) { 'video' => Icons.play_circle_fill_rounded, 'image' => Icons.image_rounded, _ => Icons.description_rounded };
     final p = it.path;
     return ClipRRect(

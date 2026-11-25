@@ -83,14 +83,76 @@ class AppCard extends StatelessWidget {
     final card = Container(
       padding: padding,
       decoration: BoxDecoration(
-        color: C.surface,
-        borderRadius: BorderRadius.circular(rLg),
-        border: Border.all(color: borderColor ?? C.border, width: borderWidth),
-        boxShadow: C.shadow,
+        // The design's glass card: soft white fill, white edge, blue-tinted shadow.
+        gradient: borderColor == null
+            ? LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: C.dark
+                    ? [C.surface, C.surface]
+                    : [Colors.white.withValues(alpha: 0.94), Colors.white.withValues(alpha: 0.78)],
+              )
+            : null,
+        color: borderColor != null ? C.surface : null,
+        borderRadius: BorderRadius.circular(rLg + 4),
+        border: Border.all(color: borderColor ?? (C.dark ? C.border : Colors.white.withValues(alpha: 0.9)), width: borderWidth),
+        boxShadow: C.dark
+            ? C.shadow
+            : [
+                BoxShadow(color: const Color(0xFF0B1B3A).withValues(alpha: 0.05), blurRadius: 3, offset: const Offset(0, 2)),
+                BoxShadow(color: const Color(0xFF0B5FC4).withValues(alpha: 0.12), blurRadius: 32, offset: const Offset(0, 14)),
+              ],
       ),
       child: child,
     );
     return onTap == null ? card : Pressable(onTap: onTap, scale: 0.985, child: card);
+  }
+}
+
+/// The design's faint play-triangle pattern, drawn over blue feature panels.
+class PlayPattern extends StatelessWidget {
+  const PlayPattern({super.key});
+  @override
+  Widget build(BuildContext context) => IgnorePointer(child: CustomPaint(painter: _PlayPatternPainter()));
+}
+
+class _PlayPatternPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final p = Paint()..color = Colors.white.withValues(alpha: 0.08);
+    for (double y = 0; y < size.height + 44; y += 44) {
+      for (double x = 0; x < size.width + 44; x += 44) {
+        canvas.drawPath(Path()..moveTo(x + 14, y + 10)..lineTo(x + 14, y + 24)..lineTo(x + 26, y + 17)..close(), p);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+/// Glossy gradient icon tile from the design (coloured 3D chip with a white glyph).
+class GlossIcon extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final double size;
+  final bool circle;
+  const GlossIcon(this.icon, this.color, {super.key, this.size = 42, this.circle = false});
+  @override
+  Widget build(BuildContext context) {
+    final top = Color.lerp(color, Colors.white, 0.38)!;
+    final bottom = Color.lerp(color, const Color(0xFF0B1B3A), 0.22)!;
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: circle ? BoxShape.circle : BoxShape.rectangle,
+        borderRadius: circle ? null : BorderRadius.circular(size * 0.36),
+        gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [top, color, bottom], stops: const [0, 0.55, 1]),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.45), width: 1),
+      ),
+      child: Icon(icon, size: size * 0.48, color: Colors.white),
+    );
   }
 }
 
@@ -108,15 +170,20 @@ class AppButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final enabled = onTap != null && !loading;
     final fg = style == BtnStyle.ghost ? C.text : Colors.white;
-    final radius = BorderRadius.circular(small ? 14 : 18);
+    final radius = BorderRadius.circular(999);
     final deco = switch (style) {
       BtnStyle.primary => BoxDecoration(
-          gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFF9378FF), Color(0xFF6A4CF0)]),
+          gradient: const LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: C.gradBlue),
           borderRadius: radius,
-          boxShadow: enabled && !small ? C.glow : null,
+          border: Border.all(color: Colors.white.withValues(alpha: 0.35), width: 1),
+          boxShadow: enabled ? [BoxShadow(color: C.primary.withValues(alpha: small ? 0.22 : 0.36), blurRadius: small ? 10 : 16, offset: Offset(0, small ? 4 : 7))] : null,
         ),
-      BtnStyle.ghost => BoxDecoration(color: C.surface2, border: Border.all(color: C.border), borderRadius: radius),
-      BtnStyle.danger => BoxDecoration(color: C.rec, borderRadius: radius, boxShadow: enabled && !small ? [BoxShadow(color: C.rec.withValues(alpha: 0.3), blurRadius: 18, offset: const Offset(0, 6))] : null),
+      BtnStyle.ghost => BoxDecoration(color: C.surface, border: Border.all(color: C.border), borderRadius: radius, boxShadow: C.shadow),
+      BtnStyle.danger => BoxDecoration(
+          gradient: const LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Color(0xFFFF8A80), Color(0xFFE4513F)]),
+          borderRadius: radius,
+          boxShadow: enabled ? [BoxShadow(color: C.rec.withValues(alpha: 0.32), blurRadius: 14, offset: const Offset(0, 6))] : null,
+        ),
     };
     final btn = Opacity(
       opacity: (onTap == null && !loading) ? 0.5 : 1,
@@ -163,14 +230,15 @@ class AppChip extends StatelessWidget {
             curve: kCurve,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
             decoration: BoxDecoration(
-              color: active ? C.primary : C.surface,
-              border: Border.all(color: active ? C.primary : C.border),
+              gradient: active ? const LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: C.gradBlue) : null,
+              color: active ? null : C.surface,
+              border: Border.all(color: active ? Colors.white.withValues(alpha: 0.3) : C.border),
               borderRadius: BorderRadius.circular(999),
               boxShadow: active ? [BoxShadow(color: C.primary.withValues(alpha: 0.3), blurRadius: 14, offset: const Offset(0, 5))] : null,
             ),
             child: AnimatedDefaultTextStyle(
               duration: kMed,
-              style: TextStyle(fontFamily: 'Manrope', fontSize: 13, fontWeight: FontWeight.w700, color: active ? Colors.white : C.muted),
+              style: TextStyle(fontFamily: 'PlusJakartaSans', fontSize: 13, fontWeight: FontWeight.w700, color: active ? Colors.white : C.muted),
               child: Text(label),
             ),
           ),
@@ -229,15 +297,7 @@ class StatCard extends StatelessWidget {
   Widget build(BuildContext context) => AppCard(
         padding: const EdgeInsets.all(16),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Container(
-            width: 38,
-            height: 38,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(13),
-              gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [C.primary.withValues(alpha: 0.22), C.primary.withValues(alpha: 0.1)]),
-            ),
-            child: Icon(icon, size: 19, color: C.primary),
-          ),
+          GlossIcon(icon, C.primary, size: 40),
           const SizedBox(height: 14),
           _value(),
           const SizedBox(height: 4),
@@ -260,12 +320,12 @@ class Avatar extends StatelessWidget {
   const Avatar(this.name, {super.key, this.size = 44});
 
   static const _pairs = [
-    [Color(0xFF9378FF), Color(0xFF5B3FE0)],
-    [Color(0xFFFF8A6B), Color(0xFFE5486B)],
+    [Color(0xFF3E94F5), Color(0xFF0847A0)],
+    [Color(0xFFFF8A6B), Color(0xFFFF6B5E)],
     [Color(0xFF3ED6B0), Color(0xFF0F9F78)],
-    [Color(0xFF5AB0FF), Color(0xFF2F6FE0)],
-    [Color(0xFFFFC857), Color(0xFFE08A00)],
-    [Color(0xFFD98CFF), Color(0xFF9D3FD6)],
+    [Color(0xFF6DB0FF), Color(0xFF2F6FE0)],
+    [Color(0xFFFFC857), Color(0xFFF2A100)],
+    [Color(0xFF5BE8C6), Color(0xFF0FA386)],
   ];
 
   @override
@@ -295,7 +355,7 @@ class SectionHeader extends StatelessWidget {
   Widget build(BuildContext context) => Padding(
         padding: const EdgeInsets.only(top: 26, bottom: 14),
         child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-          Expanded(child: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, letterSpacing: -0.4))),
+          Expanded(child: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, letterSpacing: -0.8))),
           if (action != null)
             Pressable(
               onTap: onAction,
@@ -379,14 +439,14 @@ void showMsg(BuildContext context, String m) {
       content: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
-          color: C.dark ? const Color(0xFF23233A) : const Color(0xFF14141F),
+          color: C.dark ? const Color(0xFF23233A) : const Color(0xFF0E1B33),
           borderRadius: BorderRadius.circular(18),
           boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.25), blurRadius: 24, offset: const Offset(0, 10))],
         ),
         child: Row(children: [
-          const Icon(Icons.check_circle_rounded, size: 20, color: Color(0xFF2DD4A0)),
+          const Icon(Icons.check_circle_rounded, size: 20, color: Color(0xFF1FC9A4)),
           const SizedBox(width: 12),
-          Expanded(child: Text(m, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14, fontFamily: 'Manrope'))),
+          Expanded(child: Text(m, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14, fontFamily: 'PlusJakartaSans'))),
         ]),
       ),
     ));
@@ -421,15 +481,7 @@ class Tile extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 4),
         decoration: BoxDecoration(border: divider ? Border(bottom: BorderSide(color: C.border)) : null),
         child: Row(children: [
-          Container(
-            width: 42,
-            height: 42,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(14),
-              gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [col.withValues(alpha: 0.22), col.withValues(alpha: 0.1)]),
-            ),
-            child: Icon(icon, size: 20, color: col),
-          ),
+          GlossIcon(icon, col),
           const SizedBox(width: 14),
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -480,12 +532,7 @@ class InfoBanner extends StatelessWidget {
           border: Border.all(color: color.withValues(alpha: 0.28)),
         ),
         child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Container(
-            width: 30,
-            height: 30,
-            decoration: BoxDecoration(color: color.withValues(alpha: 0.18), borderRadius: BorderRadius.circular(10)),
-            child: Icon(icon, size: 17, color: color),
-          ),
+          GlossIcon(icon, color, size: 30),
           const SizedBox(width: 12),
           Expanded(child: Padding(padding: const EdgeInsets.only(top: 1), child: Text(text, style: const TextStyle(fontSize: 13.5, height: 1.45, fontWeight: FontWeight.w500)))),
         ]),
@@ -864,4 +911,136 @@ class DropZoneBar<T extends Object> extends StatelessWidget {
           );
         },
       );
+}
+
+
+/// The ViewRec mark: a bookmark with a yellow play button. Drawn in code so it stays sharp at any size.
+class BrandMark extends StatelessWidget {
+  final double size;
+  final Color? bookmark;
+  const BrandMark({super.key, this.size = 40, this.bookmark});
+  @override
+  Widget build(BuildContext context) => SizedBox(width: size, height: size, child: CustomPaint(painter: _MarkPainter(bookmark ?? C.primary)));
+}
+
+class _MarkPainter extends CustomPainter {
+  final Color bookmark;
+  _MarkPainter(this.bookmark);
+  @override
+  void paint(Canvas canvas, Size size) {
+    final k = size.width / 64;
+    Offset p(double x, double y) => Offset(x * k, y * k);
+    final book = Path()
+      ..moveTo(p(17, 8).dx, p(17, 8).dy)
+      ..lineTo(p(47, 8).dx, p(47, 8).dy)
+      ..lineTo(p(47, 57).dx, p(47, 57).dy)
+      ..lineTo(p(32, 44).dx, p(32, 44).dy)
+      ..lineTo(p(17, 57).dx, p(17, 57).dy)
+      ..close();
+    final fill = Paint()..color = bookmark;
+    final edge = Paint()
+      ..color = bookmark
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 4 * k
+      ..strokeJoin = StrokeJoin.round;
+    canvas.drawPath(book, fill);
+    canvas.drawPath(book, edge);
+    canvas.drawCircle(p(32, 23), 10.5 * k, Paint()..color = const Color(0xFFFFC21A));
+    final tri = Path()
+      ..moveTo(p(29.2, 18.2).dx, p(29.2, 18.2).dy)
+      ..lineTo(p(29.2, 27.8).dx, p(29.2, 27.8).dy)
+      ..lineTo(p(37.2, 23).dx, p(37.2, 23).dy)
+      ..close();
+    canvas.drawPath(tri, Paint()..color = bookmark);
+    canvas.drawPath(
+        tri,
+        Paint()
+          ..color = bookmark
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2.4 * k
+          ..strokeJoin = StrokeJoin.round);
+  }
+
+  @override
+  bool shouldRepaint(_MarkPainter o) => o.bookmark != bookmark;
+}
+
+/// The design's pricing "ticket": a rounded card with a notch on each side at the dashed divider.
+/// [blue] gives the featured style (blue gradient with the play pattern).
+class TicketCard extends StatefulWidget {
+  final Widget top;
+  final Widget bottom;
+  final bool blue;
+  const TicketCard({super.key, required this.top, required this.bottom, this.blue = false});
+  @override
+  State<TicketCard> createState() => _TicketCardState();
+}
+
+class _TicketCardState extends State<TicketCard> {
+  final _topKey = GlobalKey();
+  double? _notchY;
+
+  void _measure() {
+    final box = _topKey.currentContext?.findRenderObject() as RenderBox?;
+    if (box != null && box.hasSize && mounted && _notchY != box.size.height) setState(() => _notchY = box.size.height);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    WidgetsBinding.instance.addPostFrameCallback((_) => _measure());
+    return CustomPaint(
+      painter: _TicketPainter(_notchY, widget.blue, C.dark),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        KeyedSubtree(key: _topKey, child: Padding(padding: const EdgeInsets.fromLTRB(22, 22, 22, 20), child: widget.top)),
+        Padding(padding: const EdgeInsets.fromLTRB(22, 18, 22, 22), child: widget.bottom),
+      ]),
+    );
+  }
+}
+
+class _TicketPainter extends CustomPainter {
+  final double? notchY;
+  final bool blue, dark;
+  _TicketPainter(this.notchY, this.blue, this.dark);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    var path = Path()..addRRect(RRect.fromRectAndRadius(Offset.zero & size, const Radius.circular(32)));
+    if (notchY != null) {
+      final holes = Path()
+        ..addOval(Rect.fromCircle(center: Offset(0, notchY!), radius: 11))
+        ..addOval(Rect.fromCircle(center: Offset(size.width, notchY!), radius: 11));
+      path = Path.combine(PathOperation.difference, path, holes);
+    }
+    canvas.drawShadow(path, blue ? C.primary : const Color(0xFF0B5FC4), blue ? 26 : 10, true);
+    final rect = Offset.zero & size;
+    final paint = Paint();
+    if (blue) {
+      paint.shader = const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: C.gradBlueDeep, stops: [0, 0.55, 1]).createShader(rect);
+    } else {
+      paint.shader = LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: dark ? [C.surface, C.surface] : const [Colors.white, Color(0xFFF4F8FF)]).createShader(rect);
+    }
+    canvas.drawPath(path, paint);
+    if (blue) {
+      canvas.save();
+      canvas.clipPath(path);
+      final p = Paint()..color = Colors.white.withValues(alpha: 0.08);
+      for (double y = 0; y < size.height + 44; y += 44) {
+        for (double x = 0; x < size.width + 44; x += 44) {
+          canvas.drawPath(Path()..moveTo(x + 14, y + 10)..lineTo(x + 14, y + 24)..lineTo(x + 26, y + 17)..close(), p);
+        }
+      }
+      canvas.restore();
+    }
+    canvas.drawPath(path, Paint()..style = PaintingStyle.stroke..strokeWidth = 1..color = blue ? Colors.white.withValues(alpha: 0.3) : (dark ? C.border : Colors.white));
+    if (notchY != null) {
+      final dash = Paint()..color = (blue ? Colors.white : C.muted).withValues(alpha: 0.45)..strokeWidth = 1.2;
+      for (double x = 16; x < size.width - 16; x += 7) {
+        canvas.drawLine(Offset(x, notchY!), Offset(x + 3.5, notchY!), dash);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _TicketPainter o) => o.notchY != notchY || o.blue != blue || o.dark != dark;
 }

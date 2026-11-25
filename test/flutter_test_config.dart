@@ -25,5 +25,16 @@ Future<void> testExecutable(FutureOr<void> Function() testMain) async {
     final l = FontLoader('Manrope')..addFont(Future.value(ByteData.view(manrope.readAsBytesSync().buffer)));
     await l.load();
   }
+  // The new look's font, in the weights the app uses.
+  final jakarta = FontLoader('PlusJakartaSans');
+  var found = false;
+  for (final w in ['Regular', 'Medium', 'SemiBold', 'Bold', 'ExtraBold']) {
+    final f = File('assets/fonts/PlusJakartaSans-$w.ttf');
+    if (f.existsSync()) {
+      jakarta.addFont(Future.value(ByteData.view(f.readAsBytesSync().buffer)));
+      found = true;
+    }
+  }
+  if (found) await jakarta.load();
   await testMain();
 }

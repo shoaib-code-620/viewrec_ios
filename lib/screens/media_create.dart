@@ -189,7 +189,9 @@ Future<int> _videoLengthMs(String path) async {
 /// Create a post, reel or story: choose a photo or video, edit it, add a caption, publish.
 class ComposeScreen extends StatefulWidget {
   final String kind; // 'post' | 'reel' | 'story'
-  const ComposeScreen({super.key, required this.kind});
+  /// A video that is already finished (for example from the caption studio). Skips the picker.
+  final XFile? initialVideo;
+  const ComposeScreen({super.key, required this.kind, this.initialVideo});
   @override
   State<ComposeScreen> createState() => _ComposeScreenState();
 }
@@ -201,6 +203,19 @@ class _ComposeScreenState extends State<ComposeScreen> {
   bool isVideo = false, busy = false;
   int durMs = 0;
   double progress = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    final v = widget.initialVideo;
+    if (v != null) {
+      file = v;
+      isVideo = true;
+      _videoLengthMs(v.path).then((ms) {
+        if (mounted) setState(() => durMs = ms);
+      });
+    }
+  }
 
   bool get _isReel => widget.kind == 'reel';
   bool get _isStory => widget.kind == 'story';
@@ -353,7 +368,7 @@ class _ComposeScreenState extends State<ComposeScreen> {
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(20),
                     child: Stack(fit: StackFit.expand, children: [
-                      MediaView(key: ValueKey(f.path), path: f.path, isVideo: isVideo, hue: const Color(0xFF3B2A6B), play: true, sound: true),
+                      MediaView(key: ValueKey(f.path), path: f.path, isVideo: isVideo, hue: const Color(0xFF0A2E66), play: true, sound: true),
                       Positioned(
                         top: 10,
                         right: 10,

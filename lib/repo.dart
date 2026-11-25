@@ -18,6 +18,8 @@ abstract class Repo {
   Future<List<Customer>> customers();
   Future<Customer> addCustomer({required String name, required String job, String? contact});
   Future<void> setCustomerStatus(String id, String status);
+  Future<void> updateCustomer(String id, {String? name, String? job, String? contact});
+  Future<void> deleteCustomer(String id);
 
   Future<List<Video>> videos();
   Future<void> updateVideo(String id, {String? status, List<String>? platforms});
@@ -34,6 +36,14 @@ abstract class Repo {
   Future<void> markStorySeen(String groupId);
   Future<List<Reel>> reels();
   Future<void> setFollow(String businessId, bool follow);
+  /// A business's public page: details, counts and its posts.
+  Future<PublicProfile> publicProfile(String businessId);
+  Future<List<BusinessRef>> followersOf(String businessId);
+  Future<List<BusinessRef>> followingOf(String businessId);
+  /// Report a post, comment, profile or message. [targetType] is post, comment, profile or message.
+  Future<void> report({required String targetType, required String targetId, required String reason, String note = ''});
+  Future<void> setBlock(String businessId, bool block);
+  Future<List<BusinessRef>> blockedAccounts();
   Future<void> setLike(String reelId, bool like);
   Future<void> setSave(String reelId, bool save);
   Future<List<Comment>> comments(String reelId);
@@ -148,6 +158,21 @@ class MockRepo implements Repo {
   @override
   Future<void> setCustomerStatus(String id, String status) async {
     _customers.firstWhere((c) => c.id == id).status = status;
+    await _wait(null);
+  }
+
+  @override
+  Future<void> updateCustomer(String id, {String? name, String? job, String? contact}) async {
+    final c = _customers.firstWhere((x) => x.id == id);
+    if (name != null) c.name = name;
+    if (job != null) c.job = job;
+    if (contact != null) c.phone = contact;
+    await _wait(null);
+  }
+
+  @override
+  Future<void> deleteCustomer(String id) async {
+    _customers.removeWhere((c) => c.id == id);
     await _wait(null);
   }
 
@@ -285,8 +310,11 @@ class MockRepo implements Repo {
   final _reels = demoReels();
   final _comments = <String, List<Comment>>{};
 
+  final _blocked = <String>{};
+  final reportsSent = <Map<String, String>>[];
+
   @override
-  Future<List<StoryGroup>> stories() => _wait(List.of(_stories));
+  Future<List<StoryGroup>> stories() => _wait(_stories.where((g) => !_blocked.contains(g.id)).toList());
 
   @override
   Future<void> markStorySeen(String groupId) async {
@@ -295,7 +323,80 @@ class MockRepo implements Repo {
   }
 
   @override
-  Future<List<Reel>> reels() => _wait(List.of(_reels));
+  Future<List<Reel>> reels() => _wait(_reels.where((r) => !_blocked.contains(r.businessId)).toList());
+
+  BusinessRef _ref(Reel r) => BusinessRef(
+        businessId: r.businessId,
+        name: r.business,
+        handle: r.handle,
+        category: r.category,
+        following: _reels.any((x) => x.businessId == r.businessId && x.following),
+        verified: r.verified,
+      );
+
+  List<BusinessRef> _allBusinesses() {
+    final seen = <String>{};
+    return [for (final r in _reels) if (seen.add(r.businessId)) _ref(r)];
+  }
+
+  @override
+  Future<PublicProfile> publicProfile(String businessId) async {
+    final mine = _reels.where((r) => r.businessId == businessId).toList();
+    final story = _stories.where((g) => g.id == businessId).toList();
+    if (mine.isEmpty && story.isEmpty) throw Exception('This profile is not available');
+    final first = mine.isNotEmpty ? mine.first : null;
+    final name = first?.business ?? story.first.business;
+    final handle = first?.handle ?? '@${name.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '')}';
+    final n = int.tryParse(businessId.replaceAll(RegExp(r'[^0-9]'), '')) ?? 1;
+    return _wait(PublicProfile(
+      businessId: businessId,
+      handle: handle,
+      name: name,
+      category: first?.category ?? story.first.category,
+      about: 'Local business on ViewRec. Every review on this page is a real customer on camera.',
+      verified: first?.verified ?? true,
+      mine: businessId == 'b0',
+      followers: 80 + n * 37,
+      followingCount: 12 + n * 3,
+      testimonials: 6 + n * 2,
+      rating: 4.5 + (n % 5) / 10,
+      following: mine.any((r) => r.following),
+      blocked: _blocked.contains(businessId),
+      posts: mine,
+    ));
+  }
+
+  @override
+  Future<List<BusinessRef>> followersOf(String businessId) =>
+      _wait(_allBusinesses().where((b) => b.businessId != businessId && !_blocked.contains(b.businessId)).toList());
+
+  @override
+  Future<List<BusinessRef>> followingOf(String businessId) {
+    final all = _allBusinesses().where((b) => b.businessId != businessId && !_blocked.contains(b.businessId)).toList();
+    return _wait([for (var i = 0; i < all.length; i++) if (i.isEven) all[i]]);
+  }
+
+  @override
+  Future<void> report({required String targetType, required String targetId, required String reason, String note = ''}) async {
+    reportsSent.add({'targetType': targetType, 'targetId': targetId, 'reason': reason, 'note': note});
+    await _wait(null);
+  }
+
+  @override
+  Future<void> setBlock(String businessId, bool block) async {
+    if (block) {
+      _blocked.add(businessId);
+      for (final r in _reels.where((r) => r.businessId == businessId)) {
+        r.following = false;
+      }
+    } else {
+      _blocked.remove(businessId);
+    }
+    await _wait(null);
+  }
+
+  @override
+  Future<List<BusinessRef>> blockedAccounts() => _wait(_allBusinesses().where((b) => _blocked.contains(b.businessId)).toList());
 
   @override
   Future<void> setFollow(String businessId, bool follow) async {
@@ -337,7 +438,7 @@ class MockRepo implements Repo {
     final id = DateTime.now().millisecondsSinceEpoch.toString();
     if (kind == 'story') {
       final me = _stories.firstWhere((g) => g.mine);
-      me.items.add(StoryItem(hue: const Color(0xFF5B3FE0), text: caption, when: 'now', mediaPath: file.path, isVideo: isVideo, edits: edits));
+      me.items.add(StoryItem(hue: const Color(0xFF0847A0), text: caption, when: 'now', mediaPath: file.path, isVideo: isVideo, edits: edits));
     } else {
       _reels.insert(
         0,
@@ -354,7 +455,7 @@ class MockRepo implements Repo {
           views: 0,
           likes: 0,
           comments: 0,
-          hue: const Color(0xFF3B2A6B),
+          hue: const Color(0xFF0A2E66),
           following: true,
           kind: kind,
           mediaPath: file.path,
@@ -451,12 +552,23 @@ String _videoExt(XFile f) {
 
 String _videoSubtype(XFile f) => switch (_videoExt(f)) { 'mov' => 'quicktime', 'webm' => 'webm', _ => 'mp4' };
 
+/// Who is signed in, for every request to the real API. The sign-in screen will set [token]; until then requests go without one.
+class ApiAuth {
+  static String? token;
+  static const appVersion = '1.0.0';
+  static Map<String, String> headers({bool json = false}) => {
+        if (json) 'Content-Type': 'application/json',
+        if (token != null) 'Authorization': 'Bearer $token',
+        'X-App-Version': appVersion,
+        'X-App-Platform': kIsWeb ? 'web' : defaultTargetPlatform.name,
+      };
+}
+
 class ApiRepo implements Repo {
   final String base;
   ApiRepo(this.base);
 
   static const _timeout = Duration(seconds: 10);
-  static const _json = {'Content-Type': 'application/json'};
 
   Uri _u(String p) => Uri.parse('$base$p');
 
@@ -469,13 +581,13 @@ class ApiRepo implements Repo {
   }
 
   Future<dynamic> _get(String p) async {
-    final r = await http.get(_u(p)).timeout(_timeout);
+    final r = await http.get(_u(p), headers: ApiAuth.headers()).timeout(_timeout);
     if (r.statusCode >= 400) throw Exception(_err(r));
     return jsonDecode(r.body);
   }
 
   Future<dynamic> _send(String method, String p, [Map<String, dynamic>? body]) async {
-    final req = http.Request(method, _u(p))..headers.addAll(_json);
+    final req = http.Request(method, _u(p))..headers.addAll(ApiAuth.headers(json: true));
     if (body != null) req.body = jsonEncode(body);
     final r = await http.Response.fromStream(await req.send().timeout(_timeout));
     if (r.statusCode >= 400) throw Exception(_err(r));
@@ -483,60 +595,68 @@ class ApiRepo implements Repo {
   }
 
   @override
-  Future<OverviewStats> overview() async => OverviewStats.fromJson(await _get('/api/overview'));
+  Future<OverviewStats> overview() async => OverviewStats.fromJson(await _get('/api/v1/overview'));
 
   @override
-  Future<List<Customer>> customers() async => (await _get('/api/customers') as List).map((e) => Customer.fromJson(e)).toList();
+  Future<List<Customer>> customers() async => (await _get('/api/v1/customers') as List).map((e) => Customer.fromJson(e)).toList();
 
   @override
   Future<Customer> addCustomer({required String name, required String job, String? contact}) async =>
-      Customer.fromJson(await _send('POST', '/api/customers', {'name': name, 'job': job, 'contact': contact}));
+      Customer.fromJson(await _send('POST', '/api/v1/customers', {'name': name, 'job': job, 'contact': contact}));
 
   @override
-  Future<void> setCustomerStatus(String id, String status) => _send('PATCH', '/api/customers/$id', {'status': status});
+  Future<void> setCustomerStatus(String id, String status) => _send('PATCH', '/api/v1/customers/$id', {'status': status});
 
   @override
-  Future<List<Video>> videos() async => (await _get('/api/videos') as List).map((e) => Video.fromJson(e)).toList();
+  Future<void> updateCustomer(String id, {String? name, String? job, String? contact}) =>
+      _send('PATCH', '/api/v1/customers/$id', {if (name != null) 'name': name, if (job != null) 'job': job, if (contact != null) 'contact': contact});
+
+  @override
+  Future<void> deleteCustomer(String id) => _send('DELETE', '/api/v1/customers/$id', null);
+
+  @override
+  Future<List<Video>> videos() async => (await _get('/api/v1/videos') as List).map((e) => Video.fromJson(e)).toList();
 
   @override
   Future<void> updateVideo(String id, {String? status, List<String>? platforms}) =>
-      _send('PATCH', '/api/videos/$id', {if (status != null) 'status': status, if (platforms != null) 'platforms': platforms});
+      _send('PATCH', '/api/v1/videos/$id', {if (status != null) 'status': status, if (platforms != null) 'platforms': platforms});
 
   @override
-  Future<List<Lead>> leads() async => (await _get('/api/leads') as List).map((e) => Lead.fromJson(e)).toList();
+  Future<List<Lead>> leads() async => (await _get('/api/v1/leads') as List).map((e) => Lead.fromJson(e)).toList();
 
   @override
-  Future<void> setLeadStatus(String id, String status) => _send('PATCH', '/api/leads/$id', {'status': status});
+  Future<void> setLeadStatus(String id, String status) => _send('PATCH', '/api/v1/leads/$id', {'status': status});
 
   @override
-  Future<PostsData> posts() async => PostsData.fromJson(await _get('/api/posts'));
+  Future<PostsData> posts() async => PostsData.fromJson(await _get('/api/v1/posts'));
 
   @override
-  Future<InsightsData> insights() async => InsightsData.fromJson(await _get('/api/insights'));
+  Future<InsightsData> insights() async => InsightsData.fromJson(await _get('/api/v1/insights'));
 
   @override
   Future<List<ThreadMessage>> leadMessages(String leadId) async =>
-      (await _get('/api/leads/$leadId/messages') as List).map((e) => ThreadMessage.fromJson(e)).toList();
+      (await _get('/api/v1/leads/$leadId/messages') as List).map((e) => ThreadMessage.fromJson(e)).toList();
 
   @override
   Future<ThreadMessage> sendLeadMessage(String leadId, String text) async =>
-      ThreadMessage.fromJson(await _send('POST', '/api/leads/$leadId/messages', {'text': text}));
+      ThreadMessage.fromJson(await _send('POST', '/api/v1/leads/$leadId/messages', {'text': text}));
 
-  // NOTE: assumes PATCH/DELETE /api/leads/{id}/messages/{messageId} and POST /api/leads/{id}/calls.
+  // See MOBILE_API.md for every address, request and response.
   @override
   Future<ThreadMessage> editLeadMessage(String leadId, String messageId, String text) async =>
-      ThreadMessage.fromJson(await _send('PATCH', '/api/leads/$leadId/messages/$messageId', {'text': text}));
+      ThreadMessage.fromJson(await _send('PATCH', '/api/v1/leads/$leadId/messages/$messageId', {'text': text}));
 
   @override
-  Future<void> deleteLeadMessage(String leadId, String messageId) => _send('DELETE', '/api/leads/$leadId/messages/$messageId');
+  Future<void> deleteLeadMessage(String leadId, String messageId) => _send('DELETE', '/api/v1/leads/$leadId/messages/$messageId');
 
   @override
-  Future<ThreadMessage> logLeadCall(String leadId) async => ThreadMessage.fromJson(await _send('POST', '/api/leads/$leadId/calls'));
+  Future<ThreadMessage> logLeadCall(String leadId) async => ThreadMessage.fromJson(await _send('POST', '/api/v1/leads/$leadId/calls'));
 
-  // NOTE: assumes the backend accepts POST /api/leads/{id}/messages/attachment as multipart (file, kind, durationMs).
+  // POST /api/v1/leads/{id}/messages/attachment as multipart: file, kind, durationMs.
   @override
   Future<ThreadMessage> sendLeadAttachment(String leadId, {required String kind, required String path, required String name, int size = 0, int durationMs = 0, void Function(double)? onProgress}) async {
-    final req = http.MultipartRequest('POST', _u('/api/leads/$leadId/messages/attachment'))
+    final req = http.MultipartRequest('POST', _u('/api/v1/leads/$leadId/messages/attachment'))
+      ..headers.addAll(ApiAuth.headers())
       ..fields['kind'] = kind
       ..fields['durationMs'] = '$durationMs'
       ..files.add(await http.MultipartFile.fromPath('file', path, filename: name));
@@ -560,30 +680,49 @@ class ApiRepo implements Repo {
 
   // ---- Media
   @override
-  Future<List<StoryGroup>> stories() async => (await _get('/api/media/stories') as List).map((e) => StoryGroup.fromJson(e)).toList();
+  Future<List<StoryGroup>> stories() async => (await _get('/api/v1/stories') as List).map((e) => StoryGroup.fromJson(e)).toList();
 
   @override
-  Future<void> markStorySeen(String groupId) => _send('POST', '/api/media/stories/$groupId/seen');
+  Future<void> markStorySeen(String groupId) => _send('POST', '/api/v1/stories/$groupId/seen');
 
   @override
-  Future<List<Reel>> reels() async => (await _get('/api/media/reels') as List).map((e) => Reel.fromJson(e)).toList();
+  Future<List<Reel>> reels() async => (await _get('/api/v1/feed') as List).map((e) => Reel.fromJson(e)).toList();
 
   @override
-  Future<void> setFollow(String businessId, bool follow) => _send(follow ? 'PUT' : 'DELETE', '/api/media/businesses/$businessId/follow');
+  Future<void> setFollow(String businessId, bool follow) => _send(follow ? 'PUT' : 'DELETE', '/api/v1/accounts/$businessId/follow');
 
   @override
-  Future<void> setLike(String reelId, bool like) => _send(like ? 'PUT' : 'DELETE', '/api/media/reels/$reelId/like');
+  Future<PublicProfile> publicProfile(String businessId) async => PublicProfile.fromJson(await _get('/api/v1/profiles/$businessId') as Map<String, dynamic>);
 
   @override
-  Future<void> setSave(String reelId, bool save) => _send(save ? 'PUT' : 'DELETE', '/api/media/reels/$reelId/save');
+  Future<List<BusinessRef>> followersOf(String businessId) async => (await _get('/api/v1/profiles/$businessId/followers') as List).map((e) => BusinessRef.fromJson(e)).toList();
 
   @override
-  Future<List<Comment>> comments(String reelId) async => (await _get('/api/media/reels/$reelId/comments') as List).map((e) => Comment.fromJson(e)).toList();
+  Future<List<BusinessRef>> followingOf(String businessId) async => (await _get('/api/v1/profiles/$businessId/following') as List).map((e) => BusinessRef.fromJson(e)).toList();
 
   @override
-  Future<Comment> addComment(String reelId, String text) async => Comment.fromJson(await _send('POST', '/api/media/reels/$reelId/comments', {'text': text}));
+  Future<void> report({required String targetType, required String targetId, required String reason, String note = ''}) =>
+      _send('POST', '/api/v1/reports', {'targetType': targetType, 'targetId': targetId, 'reason': reason, if (note.isNotEmpty) 'note': note});
 
-  // NOTE: assumes the backend accepts POST /api/media/{post|reel|story} as multipart (file, caption, duration).
+  @override
+  Future<void> setBlock(String businessId, bool block) => _send(block ? 'PUT' : 'DELETE', '/api/v1/blocks/$businessId');
+
+  @override
+  Future<List<BusinessRef>> blockedAccounts() async => (await _get('/api/v1/blocks') as List).map((e) => BusinessRef.fromJson(e)).toList();
+
+  @override
+  Future<void> setLike(String reelId, bool like) => _send(like ? 'PUT' : 'DELETE', '/api/v1/posts/$reelId/like');
+
+  @override
+  Future<void> setSave(String reelId, bool save) => _send(save ? 'PUT' : 'DELETE', '/api/v1/posts/$reelId/save');
+
+  @override
+  Future<List<Comment>> comments(String reelId) async => (await _get('/api/v1/posts/$reelId/comments') as List).map((e) => Comment.fromJson(e)).toList();
+
+  @override
+  Future<Comment> addComment(String reelId, String text) async => Comment.fromJson(await _send('POST', '/api/v1/posts/$reelId/comments', {'text': text}));
+
+  // POST /api/v1/posts as multipart: file, kind (post | reel | story), caption, duration, isVideo, edits. See MOBILE_API.md.
   @override
   Future<void> createContent({required String kind, required XFile file, required bool isVideo, String caption = '', String duration = '0:00', EditSpec? edits, void Function(double)? onProgress}) async {
     final total = await file.length();
@@ -593,7 +732,9 @@ class ApiRepo implements Repo {
       onProgress?.call(total == 0 ? 0 : sent / total);
       return chunk;
     });
-    final req = http.MultipartRequest('POST', _u('/api/media/$kind'))
+    final req = http.MultipartRequest('POST', _u('/api/v1/posts'))
+      ..headers.addAll(ApiAuth.headers())
+      ..fields['kind'] = kind
       ..fields['caption'] = caption
       ..fields['duration'] = duration
       ..fields['isVideo'] = '$isVideo'
@@ -623,35 +764,35 @@ class ApiRepo implements Repo {
   }
 
   @override
-  Future<Map<String, String>> accounts() async => Map<String, String>.from(await _get('/api/accounts') as Map);
+  Future<Map<String, String>> accounts() async => Map<String, String>.from(await _get('/api/v1/accounts') as Map);
 
   @override
-  Future<void> connectAccount(String platformId) => _send('PUT', '/api/accounts/$platformId');
+  Future<void> connectAccount(String platformId) => _send('PUT', '/api/v1/accounts/$platformId');
 
   @override
-  Future<void> disconnectAccount(String platformId) => _send('DELETE', '/api/accounts/$platformId');
+  Future<void> disconnectAccount(String platformId) => _send('DELETE', '/api/v1/accounts/$platformId');
 
   @override
-  Future<List<AppNotification>> notifications() async => (await _get('/api/notifications') as List).map((e) => AppNotification.fromJson(e)).toList();
+  Future<List<AppNotification>> notifications() async => (await _get('/api/v1/notifications') as List).map((e) => AppNotification.fromJson(e)).toList();
 
   @override
-  Future<BillingInfo> billing() async => BillingInfo.fromJson(await _get('/api/billing'));
+  Future<BillingInfo> billing() async => BillingInfo.fromJson(await _get('/api/v1/billing'));
 
   @override
-  Future<AutomationSettings> automations() async => AutomationSettings.fromJson(await _get('/api/automations'));
+  Future<AutomationSettings> automations() async => AutomationSettings.fromJson(await _get('/api/v1/automations'));
 
   @override
-  Future<void> saveAutomations(AutomationSettings s) => _send('PUT', '/api/automations', s.toJson());
+  Future<void> saveAutomations(AutomationSettings s) => _send('PUT', '/api/v1/automations', s.toJson());
 
   @override
-  Future<BusinessProfile> profile() async => BusinessProfile.fromJson(await _get('/api/profile'));
+  Future<BusinessProfile> profile() async => BusinessProfile.fromJson(await _get('/api/v1/profile'));
 
   @override
-  Future<void> saveProfile(BusinessProfile p) => _send('PUT', '/api/profile', p.toJson());
+  Future<void> saveProfile(BusinessProfile p) => _send('PUT', '/api/v1/profile', p.toJson());
 
   @override
   Future<void> submitWrittenTestimonial({required String inviteToken, required int rating, required String text, required String agreedAt}) =>
-      _send('POST', '/api/invites/$inviteToken/written', {
+      _send('POST', '/api/v1/public/invites/$inviteToken/written', {
         'rating': rating,
         'text': text,
         'consent': {'agreed': true, 'agreedAt': agreedAt, 'singleSession': true, 'platform': kIsWeb ? 'web' : defaultTargetPlatform.name},
@@ -667,7 +808,8 @@ class ApiRepo implements Repo {
       return chunk;
     });
 
-    final req = http.MultipartRequest('POST', _u('/api/invites/$inviteToken/video'))
+    final req = http.MultipartRequest('POST', _u('/api/v1/public/invites/$inviteToken/video'))
+      ..headers.addAll(ApiAuth.headers())
       ..fields['consent'] = jsonEncode({
         'agreed': true,
         'agreedAt': agreedAt,

@@ -271,7 +271,7 @@ class _ConfettiLayerState extends State<_ConfettiLayer> with SingleTickerProvide
 
   static List<_Bit> _makeBits() {
     final r = math.Random();
-    const colors = [Color(0xFF9378FF), Color(0xFFFF4F9A), Color(0xFFFFB84D), Color(0xFF2DD4A0), Color(0xFF5AB0FF)];
+    const colors = [Color(0xFF3E94F5), Color(0xFFFF6B5E), Color(0xFFFFC21A), Color(0xFF1FC9A4), Color(0xFF6DB0FF)];
     return [
       for (var i = 0; i < 34; i++)
         _Bit(

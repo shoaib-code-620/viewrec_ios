@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import '../liquid_widgets.dart';
 import '../async_view.dart';
@@ -75,7 +76,10 @@ class BillingScreen extends StatelessWidget {
                   subtitle: b.hasCard ? 'Manage your payment method' : 'An activation agent calls before anything starts',
                   onTap: () => showMsg(context, 'Add a card when your trial ends'),
                 ),
-                Tile(icon: Icons.receipt_long_rounded, title: 'Billing email', subtitle: b.billingEmail, divider: false, onTap: () {}),
+                Tile(icon: Icons.receipt_long_rounded, title: 'Billing email', subtitle: b.billingEmail, divider: false, onTap: () {
+                  Clipboard.setData(ClipboardData(text: b.billingEmail));
+                  showMsg(context, 'Billing email copied');
+                }),
               ]),
             ),
             const SectionHeader('Invoices'),

@@ -203,7 +203,7 @@ class _TestimonialCard extends StatelessWidget {
                   padding: const EdgeInsets.fromLTRB(16, 26, 16, 12),
                   decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.transparent, Colors.black.withValues(alpha: 0.55)])),
                   child: Row(children: [
-                    for (var i = 0; i < 5; i++) Icon(i < v.rating ? PIconsFill.star : PIconsRegular.star, size: 13, color: const Color(0xFFFFD25E)),
+                    for (var i = 0; i < 5; i++) Icon(i < v.rating ? PIconsFill.star : PIconsRegular.star, size: 13, color: const Color(0xFFFFC21A)),
                     const Spacer(),
                     Text(v.job, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white)),
                   ]),
@@ -233,7 +233,7 @@ class _TestimonialCard extends StatelessWidget {
           const Icon(PIconsFill.quotes, color: Colors.white54, size: 34),
           const Spacer(),
           Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.end, children: [
-            Row(mainAxisSize: MainAxisSize.min, children: [for (var i = 0; i < 5; i++) Icon(i < v.rating ? PIconsFill.star : PIconsRegular.star, size: 13, color: const Color(0xFFFFD25E))]),
+            Row(mainAxisSize: MainAxisSize.min, children: [for (var i = 0; i < 5; i++) Icon(i < v.rating ? PIconsFill.star : PIconsRegular.star, size: 13, color: const Color(0xFFFFC21A))]),
             const SizedBox(height: 6),
             StatusBadge(v.status),
           ]),

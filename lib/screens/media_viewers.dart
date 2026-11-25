@@ -6,6 +6,8 @@ import 'media_create.dart';
 import '../repo.dart';
 import '../widgets.dart';
 import 'media_widgets.dart';
+import 'media_profile.dart';
+import '../theme.dart';
 
 // ===========================================================================
 // Stories
@@ -45,6 +47,41 @@ class _StoryViewerState extends State<StoryViewer> with SingleTickerProviderStat
       }
     });
     _open();
+  }
+
+  /// The "..." menu on a story: view the page, report it, or block the business. The story waits while it is open.
+  Future<void> _menu() async {
+    _p.stop();
+    final gr = group;
+    await showSheet(
+      context,
+      Column(mainAxisSize: MainAxisSize.min, children: [
+        Tile(icon: Icons.storefront_rounded, title: 'View ${gr.business}', onTap: () {
+          Navigator.pop(context);
+          openProfile(context, gr.id);
+        }),
+        Tile(icon: Icons.flag_rounded, iconColor: C.amber, title: 'Report this story', onTap: () {
+          Navigator.pop(context);
+          showReportSheet(context, targetType: 'post', targetId: '${gr.id}:$i', subject: 'this story');
+        }),
+        Tile(icon: Icons.block_rounded, iconColor: C.rec, title: 'Block ${gr.business}', divider: false, onTap: () async {
+          Navigator.pop(context);
+          final ok = await blockBusiness(context, businessId: gr.id, name: gr.business);
+          if (!ok || !mounted) return;
+          widget.groups.removeWhere((x) => x.id == gr.id);
+          if (widget.groups.isEmpty) {
+            _close();
+          } else {
+            setState(() {
+              g = g.clamp(0, widget.groups.length - 1);
+              i = 0;
+            });
+            _p.forward(from: 0);
+          }
+        }),
+      ]),
+    );
+    if (mounted && !focus.hasFocus && widget.groups.contains(gr)) _p.forward();
   }
 
   void _open() {
@@ -178,6 +215,7 @@ class _StoryViewerState extends State<StoryViewer> with SingleTickerProviderStat
                       Text(group.category, style: TextStyle(fontSize: 11.5, color: Colors.white.withValues(alpha: 0.7))),
                     ]),
                   ),
+                  if (!group.mine) IconButton(onPressed: _menu, icon: const Icon(Icons.more_horiz_rounded, color: Colors.white)),
                   IconButton(onPressed: _close, icon: const Icon(Icons.close_rounded, color: Colors.white)),
                 ]),
               ),
@@ -214,7 +252,7 @@ class _StoryViewerState extends State<StoryViewer> with SingleTickerProviderStat
                       HapticFeedback.lightImpact();
                       setState(() => liked = !liked);
                     },
-                    icon: AnimatedScale(scale: liked ? 1.2 : 1, duration: const Duration(milliseconds: 300), curve: Curves.easeOutBack, child: Icon(liked ? Icons.favorite_rounded : Icons.favorite_border_rounded, color: liked ? const Color(0xFFFF4F6A) : Colors.white, size: 28)),
+                    icon: AnimatedScale(scale: liked ? 1.2 : 1, duration: const Duration(milliseconds: 300), curve: Curves.easeOutBack, child: Icon(liked ? Icons.favorite_rounded : Icons.favorite_border_rounded, color: liked ? const Color(0xFFFF6B5E) : Colors.white, size: 28)),
                   ),
                 ]),
               ),
@@ -257,8 +295,10 @@ class _ReelsViewerState extends State<ReelsViewer> {
   }
 
   void _refresh() {
-    if (mounted) setState(() {});
+    if (!mounted) return;
+    setState(() {});
     widget.onChanged();
+    if (widget.reels.isEmpty) Navigator.of(context).maybePop();
   }
 
   @override
@@ -371,7 +411,7 @@ class _ReelPageState extends State<_ReelPage> with SingleTickerProviderStateMixi
             right: 12,
             bottom: 110,
             child: Column(children: [
-              _rail(r.liked ? Icons.favorite_rounded : Icons.favorite_border_rounded, compact(r.likes), () => MediaActions.toggleLike(context, r, widget.onChanged), color: r.liked ? const Color(0xFFFF4F6A) : Colors.white, bounce: r.liked),
+              _rail(r.liked ? Icons.favorite_rounded : Icons.favorite_border_rounded, compact(r.likes), () => MediaActions.toggleLike(context, r, widget.onChanged), color: r.liked ? const Color(0xFFFF6B5E) : Colors.white, bounce: r.liked),
               _rail(Icons.chat_bubble_outline_rounded, compact(r.comments), () => showCommentsSheet(context, r, widget.onChanged)),
               _rail(Icons.ios_share_rounded, 'Share', () => MediaActions.share(context, r)),
               _rail(r.saved ? Icons.bookmark_rounded : Icons.bookmark_border_rounded, r.saved ? 'Saved' : 'Save', () => MediaActions.toggleSave(context, r, widget.onChanged), bounce: r.saved),
@@ -384,7 +424,7 @@ class _ReelPageState extends State<_ReelPage> with SingleTickerProviderStateMixi
             bottom: 52,
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
               Row(children: [
-                Avatar(r.business, size: 40),
+                GestureDetector(onTap: () => openProfile(context, r.businessId), child: Avatar(r.business, size: 40)),
                 const SizedBox(width: 10),
                 Flexible(
                   child: Row(mainAxisSize: MainAxisSize.min, children: [
@@ -394,12 +434,17 @@ class _ReelPageState extends State<_ReelPage> with SingleTickerProviderStateMixi
                 ),
                 const SizedBox(width: 10),
                 FollowButton(following: r.following, onDark: true, onTap: () => MediaActions.toggleFollow(context, r, widget.all, widget.onChanged)),
+                GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => showPostMenu(context, r, all: widget.all, onChanged: widget.onChanged),
+                  child: const Padding(padding: EdgeInsets.all(8), child: Icon(Icons.more_horiz_rounded, color: Colors.white)),
+                ),
               ]),
               const SizedBox(height: 12),
               Text(r.caption, maxLines: 3, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 14.5, height: 1.4, color: Colors.white, fontWeight: FontWeight.w500)),
               const SizedBox(height: 10),
               Row(children: [
-                for (var k = 0; k < 5; k++) Icon(k < r.rating ? Icons.star_rounded : Icons.star_outline_rounded, size: 15, color: const Color(0xFFFFD25E)),
+                for (var k = 0; k < 5; k++) Icon(k < r.rating ? Icons.star_rounded : Icons.star_outline_rounded, size: 15, color: const Color(0xFFFFC21A)),
                 const SizedBox(width: 8),
                 Flexible(child: Text('${r.reviewer} · ${r.category}', maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: Colors.white.withValues(alpha: 0.8)))),
               ]),

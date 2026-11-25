@@ -8,6 +8,7 @@ import '../repo.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'media_create.dart';
+import 'media_profile.dart';
 import 'media_viewers.dart';
 import 'media_widgets.dart';
 
@@ -146,7 +147,7 @@ class _MediaBodyState extends State<_MediaBody> {
           padding: const EdgeInsets.fromLTRB(18, 0, 18, 10),
           child: AppCard(
             child: Row(children: [
-              Avatar(r.business, size: 44),
+              GestureDetector(onTap: () => openProfile(context, r.businessId), child: Avatar(r.business, size: 44)),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -191,12 +192,12 @@ class _ReelCardState extends State<_ReelCard> {
         Padding(
           padding: const EdgeInsets.fromLTRB(12, 8, 6, 8),
           child: Row(children: [
-            Avatar(r.business, size: 40),
+            GestureDetector(onTap: () => openProfile(context, r.businessId), child: Avatar(r.business, size: 40)),
             const SizedBox(width: 10),
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Row(children: [
-                  Flexible(child: Text(r.business, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14.5))),
+                  Flexible(child: GestureDetector(onTap: () => openProfile(context, r.businessId), child: Text(r.business, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14.5)))),
                   if (r.verified) Padding(padding: const EdgeInsets.only(left: 4), child: Icon(Icons.verified_rounded, size: 15, color: C.blue)),
                 ]),
                 Text(r.category, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 11.5, color: C.muted, fontWeight: FontWeight.w500)),
@@ -205,7 +206,11 @@ class _ReelCardState extends State<_ReelCard> {
             const SizedBox(width: 8),
             FollowButton(following: r.following, onTap: () => MediaActions.toggleFollow(context, r, widget.all, widget.onChanged)),
             const SizedBox(width: 2),
-            Icon(Icons.more_horiz_rounded, color: C.muted),
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => showPostMenu(context, r, all: widget.all, onChanged: widget.onChanged),
+              child: Padding(padding: const EdgeInsets.all(8), child: Icon(Icons.more_horiz_rounded, color: C.muted)),
+            ),
           ]),
         ),
         // the video
@@ -260,7 +265,7 @@ class _ReelCardState extends State<_ReelCard> {
                   bottom: 12,
                   child: Row(children: [
                     if (r.rating > 0) ...[
-                      for (var k = 0; k < 5; k++) Icon(k < r.rating ? Icons.star_rounded : Icons.star_outline_rounded, size: 15, color: const Color(0xFFFFD25E)),
+                      for (var k = 0; k < 5; k++) Icon(k < r.rating ? Icons.star_rounded : Icons.star_outline_rounded, size: 15, color: const Color(0xFFFFC21A)),
                       const SizedBox(width: 8),
                     ],
                     Expanded(child: Text(r.reviewer, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: Colors.white))),
@@ -285,7 +290,7 @@ class _ReelCardState extends State<_ReelCard> {
             _action(r.liked ? Icons.favorite_rounded : Icons.favorite_border_rounded, () {
               if (!r.liked) setState(() => burst++);
               MediaActions.toggleLike(context, r, widget.onChanged);
-            }, color: r.liked ? const Color(0xFFFF4F6A) : C.text, bounce: r.liked),
+            }, color: r.liked ? const Color(0xFFFF6B5E) : C.text, bounce: r.liked),
             _action(Icons.chat_bubble_outline_rounded, () => showCommentsSheet(context, r, widget.onChanged)),
             _action(Icons.ios_share_rounded, () => MediaActions.share(context, r)),
             const Spacer(),

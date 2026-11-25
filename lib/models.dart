@@ -48,6 +48,7 @@ class Lead {
         source: j['source'] ?? '',
         status: j['status'] ?? 'new',
         phone: j['phone'] ?? '',
+        lastNote: j['lastNote'],
       );
 }
 

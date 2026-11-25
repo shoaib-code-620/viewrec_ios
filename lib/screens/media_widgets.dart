@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../media_data.dart';
 import 'media_create.dart';
+import 'media_profile.dart';
 import '../motion.dart';
 import '../repo.dart';
 import '../theme.dart';
@@ -34,7 +35,7 @@ class FollowButton extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(999),
-          gradient: following ? null : const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFF9378FF), Color(0xFF6A4CF0)]),
+          gradient: following ? null : const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFF3E94F5), Color(0xFF0B5FC4)]),
           color: following ? (onDark ? Colors.white.withValues(alpha: 0.18) : C.surface2) : null,
           border: following ? Border.all(color: onDark ? Colors.white.withValues(alpha: 0.35) : C.border) : null,
           boxShadow: following ? null : [BoxShadow(color: C.primary.withValues(alpha: 0.3), blurRadius: 12, offset: const Offset(0, 4))],
@@ -133,7 +134,7 @@ class _RingPainter extends CustomPainter {
     } else {
       p.shader = SweepGradient(
         transform: GradientRotation(rotation),
-        colors: const [Color(0xFF7C5CFF), Color(0xFFFF4F9A), Color(0xFFFFB84D), Color(0xFF7C5CFF)],
+        colors: const [Color(0xFF0B5FC4), Color(0xFFFF6B5E), Color(0xFFFFC21A), Color(0xFF0B5FC4)],
       ).createShader(rect);
     }
     canvas.drawOval(rect, p);
@@ -288,6 +289,12 @@ class _CommentsBodyState extends State<_CommentsBody> {
                                 Text(c.text, style: const TextStyle(fontSize: 14, height: 1.35)),
                               ]),
                             ),
+                            if (c.author != 'You')
+                              GestureDetector(
+                                behavior: HitTestBehavior.opaque,
+                                onTap: () => showReportSheet(context, targetType: 'comment', targetId: c.id, subject: 'this comment'),
+                                child: Padding(padding: const EdgeInsets.fromLTRB(8, 2, 0, 8), child: Icon(Icons.flag_outlined, size: 17, color: C.muted)),
+                              ),
                           ]),
                         ),
                     ]),
@@ -313,7 +320,7 @@ class _CommentsBodyState extends State<_CommentsBody> {
             child: Container(
               width: 46,
               height: 46,
-              decoration: const BoxDecoration(shape: BoxShape.circle, gradient: LinearGradient(colors: [Color(0xFF9378FF), Color(0xFF6A4CF0)])),
+              decoration: const BoxDecoration(shape: BoxShape.circle, gradient: LinearGradient(colors: [Color(0xFF3E94F5), Color(0xFF0B5FC4)])),
               child: sending ? const Padding(padding: EdgeInsets.all(13), child: CircularProgressIndicator(strokeWidth: 2.4, color: Colors.white)) : const Icon(Icons.arrow_upward_rounded, color: Colors.white, size: 22),
             ),
           ),
@@ -324,9 +331,9 @@ class _CommentsBodyState extends State<_CommentsBody> {
 /// The "+" menu: what do you want to create?
 void showCreateSheet(BuildContext context) {
   final items = <(IconData, String, String, Color)>[
-    (Icons.grid_on_rounded, 'Post', 'Share a photo or video with a caption', const Color(0xFF2F8FE0)),
-    (Icons.movie_creation_rounded, 'Reel', 'A short vertical video customers can follow', const Color(0xFFFF4F9A)),
-    (Icons.auto_stories_rounded, 'Story', 'Disappears after 24 hours', const Color(0xFFFFB84D)),
+    (Icons.grid_on_rounded, 'Post', 'Share a photo or video with a caption', const Color(0xFF3E94F5)),
+    (Icons.movie_creation_rounded, 'Reel', 'A short vertical video customers can follow', const Color(0xFFFF6B5E)),
+    (Icons.auto_stories_rounded, 'Story', 'Disappears after 24 hours', const Color(0xFFFFC21A)),
   ];
   showSheet(
     context,
