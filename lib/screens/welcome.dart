@@ -22,6 +22,7 @@ class WelcomeScreen extends StatelessWidget {
     const words = ['Your', 'happiest', 'customer', 'is', 'your', 'best', 'salesperson.'];
     return Scaffold(
       body: Stack(children: [
+        const Positioned.fill(child: FloatingDots(count: 12)),
         const Positioned(right: -120, top: -80, child: AmbientGlow(color: C.primary, size: 380)),
         Positioned(left: -140, top: 520, child: AmbientGlow(color: C.blue, size: 360)),
         SafeArea(

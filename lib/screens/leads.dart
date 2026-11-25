@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import '../async_view.dart';
+import '../calls.dart';
 import 'lead_thread.dart';
 import '../models.dart';
+import '../motion.dart';
 import '../repo.dart';
 import '../theme.dart';
 import '../widgets.dart';
@@ -26,6 +28,7 @@ class _LeadsBody extends StatefulWidget {
 class _LeadsBodyState extends State<_LeadsBody> {
   late final List<Lead> leads = widget.leads;
   int tab = 0;
+  bool dragging = false;
   static const tabs = ['All', 'New', 'Contacted', 'Won', 'Lost'];
 
   Color _c(String s) => switch (s) { 'new' => C.amber, 'contacted' => C.blue, 'won' => C.green, _ => C.muted };
@@ -65,7 +68,10 @@ class _LeadsBodyState extends State<_LeadsBody> {
             ),
             const SizedBox(height: 14),
             Row(children: [
-              Expanded(child: AppButton('Call', icon: Icons.call_rounded, small: true, onTap: () => Navigator.pop(ctx))),
+              Expanded(child: AppButton('Call', icon: Icons.call_rounded, small: true, onTap: () {
+                Navigator.pop(ctx);
+                callPhone(context, name: l.name, phone: l.phone, onCalled: () => repo.logLeadCall(l.id).catchError((_) => ThreadMessage(id: '', from: '', text: '', when: ''))); 
+              })),
               const SizedBox(width: 8),
               Expanded(child: AppButton('Reply', icon: Icons.reply_rounded, small: true, style: BtnStyle.ghost, onTap: () {
                 Navigator.pop(ctx);
@@ -91,10 +97,11 @@ class _LeadsBodyState extends State<_LeadsBody> {
   @override
   Widget build(BuildContext context) {
     final shown = leads.where((l) => tab == 0 || l.status == tabs[tab].toLowerCase()).toList();
-    return RefreshIndicator(
+    return Stack(children: [
+      RefreshIndicator(
       onRefresh: widget.refresh,
       child: AppPage(children: [
-        const Muted('Requests from your directory listing, review page and website. Reply fast to win the job.'),
+        const Muted('Requests from your directory listing, review page and website. Reply fast to win the job. Hold a request and drag it to a status at the top to move it.'),
         const SizedBox(height: 14),
         Row(children: [
           Expanded(child: StatCard(icon: Icons.mark_email_unread_rounded, label: 'New', value: '${leads.where((l) => l.status == 'new').length}')),
@@ -107,7 +114,11 @@ class _LeadsBodyState extends State<_LeadsBody> {
         for (final l in shown)
           Padding(
             padding: const EdgeInsets.only(bottom: 12),
-            child: AppCard(
+            child: DragCard<Lead>(
+              data: l,
+              onStart: () => setState(() => dragging = true),
+              onEnd: () => setState(() => dragging = false),
+              child: AppCard(
               onTap: () => _open(l),
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Row(children: [
@@ -122,7 +133,7 @@ class _LeadsBodyState extends State<_LeadsBody> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
                     decoration: BoxDecoration(color: _c(l.status).withValues(alpha: 0.15), borderRadius: BorderRadius.circular(999)),
-                    child: Text(l.status[0].toUpperCase() + l.status.substring(1), style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: _c(l.status))),
+                    child: PopOnChange(value: l.status, child: Text(l.status[0].toUpperCase() + l.status.substring(1), style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: _c(l.status)))),
                   ),
                 ]),
                 const SizedBox(height: 10),
@@ -131,10 +142,35 @@ class _LeadsBodyState extends State<_LeadsBody> {
                 Row(children: [Icon(Icons.north_east_rounded, size: 13, color: C.primary), const SizedBox(width: 4), Text('via ${l.source}', style: TextStyle(fontSize: 12, color: C.primary))]),
               ]),
             ),
+            ),
           ),
         if (shown.isEmpty) const EmptyState(Icons.handshake_rounded, 'No requests here', 'New requests show up as soon as they arrive.'),
         const SizedBox(height: 80),
       ]),
-    );
+      ),
+      Positioned(
+        top: 0,
+        left: 0,
+        right: 0,
+        child: DropZoneBar<Lead>(
+          show: dragging,
+          zones: [
+            DropZone('new', 'New', C.amber, Icons.mark_email_unread_rounded),
+            DropZone('contacted', 'Contacted', C.blue, Icons.reply_rounded),
+            DropZone('won', 'Won', C.green, Icons.emoji_events_rounded),
+            DropZone('lost', 'Lost', C.muted, Icons.close_rounded),
+          ],
+          canDrop: (l, id) => l.status != id,
+          onDrop: (l, id) {
+            _setStatus(l, id);
+            if (id == 'won') {
+              showSuccess(context, 'Won! ${l.name}');
+            } else {
+              showMsg(context, '${l.name} marked as $id');
+            }
+          },
+        ),
+      ),
+    ]);
   }
 }

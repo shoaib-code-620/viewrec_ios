@@ -310,6 +310,7 @@ class _LiquidPillsState extends State<LiquidPills> with SingleTickerProviderStat
   Widget build(BuildContext context) => SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         physics: const BouncingScrollPhysics(),
+        clipBehavior: Clip.none,
         child: Container(
           padding: const EdgeInsets.all(4),
           decoration: BoxDecoration(color: C.surface, borderRadius: BorderRadius.circular(999), border: Border.all(color: C.border), boxShadow: C.shadow),
@@ -340,7 +341,7 @@ class _LiquidPillsState extends State<LiquidPills> with SingleTickerProviderStat
                   onTap: () => widget.onChanged(i),
                   child: Container(
                     key: _keys[i],
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 10),
                     color: Colors.transparent,
                     child: AnimatedDefaultTextStyle(
                       duration: const Duration(milliseconds: 400),

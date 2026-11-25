@@ -31,6 +31,7 @@ class _PhonebookBodyState extends State<_PhonebookBody> {
   late final List<Customer> list = widget.initial;
   String filter = 'all';
   String q = '';
+  bool dragging = false;
 
   Future<void> _set(Customer c, String status) async {
     final prev = c.status;
@@ -89,7 +90,8 @@ class _PhonebookBodyState extends State<_PhonebookBody> {
   Widget build(BuildContext context) {
     final shown = list.where((c) => (filter == 'all' || c.status == filter) && c.name.toLowerCase().contains(q.toLowerCase())).toList();
     final pending = list.where((c) => c.status == 'suggested').toList();
-    return RefreshIndicator(
+    return Stack(children: [
+      RefreshIndicator(
       onRefresh: widget.refresh,
       child: AppPage(children: [
         Row(children: [
@@ -135,7 +137,11 @@ class _PhonebookBodyState extends State<_PhonebookBody> {
         for (final c in shown)
           Padding(
             padding: const EdgeInsets.only(bottom: 12),
-            child: AppCard(
+            child: DragCard<Customer>(
+              data: c,
+              onStart: () => setState(() => dragging = true),
+              onEnd: () => setState(() => dragging = false),
+              child: AppCard(
               onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => ContactDetailScreen(customer: c))).then((_) {
                 if (mounted) setState(() {});
               }),
@@ -157,7 +163,10 @@ class _PhonebookBodyState extends State<_PhonebookBody> {
                 if (c.status == 'suggested') ...[
                   const SizedBox(height: 12),
                   Row(children: [
-                    Expanded(child: AppButton('Approve', small: true, onTap: () => _set(c, 'approved'))),
+                    Expanded(child: AppButton('Approve', small: true, onTap: () {
+                      _set(c, 'approved');
+                      showSuccess(context, '${c.name} approved');
+                    })),
                     const SizedBox(width: 8),
                     Expanded(child: AppButton('Skip', small: true, style: BtnStyle.ghost, onTap: () => _set(c, 'skipped'))),
                   ]),
@@ -179,10 +188,33 @@ class _PhonebookBodyState extends State<_PhonebookBody> {
                 ],
               ]),
             ),
+            ),
           ),
         if (shown.isEmpty) const EmptyState(Icons.contacts_rounded, 'No contacts here', 'Add or import customers to start asking.'),
         const SizedBox(height: 80),
       ]),
-    );
+      ),
+      Positioned(
+        top: 0,
+        left: 0,
+        right: 0,
+        child: DropZoneBar<Customer>(
+          show: dragging,
+          zones: [
+            DropZone('approved', 'Approve', C.green, Icons.check_rounded),
+            DropZone('skipped', 'Skip', C.muted, Icons.close_rounded),
+          ],
+          canDrop: (c, id) => c.status != id && c.status != 'recorded',
+          onDrop: (c, id) {
+            _set(c, id);
+            if (id == 'approved') {
+              showSuccess(context, '${c.name} approved');
+            } else {
+              showMsg(context, '${c.name} skipped');
+            }
+          },
+        ),
+      ),
+    ]);
   }
 }

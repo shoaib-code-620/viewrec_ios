@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart' show HapticFeedback;
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'liquid_widgets.dart';
@@ -121,6 +122,8 @@ class AppButton extends StatelessWidget {
       opacity: (onTap == null && !loading) ? 0.5 : 1,
       child: Pressable(
         onTap: enabled ? onTap : null,
+        glow: style == BtnStyle.primary ? C.primary : (style == BtnStyle.danger ? C.rec : null),
+        glowRadius: small ? 14 : 18,
         child: AnimatedContainer(
           duration: kMed,
           curve: kCurve,
@@ -193,10 +196,15 @@ class StatusBadge extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
       decoration: BoxDecoration(color: c.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(999)),
       child: Row(mainAxisSize: MainAxisSize.min, children: [
-        Container(width: 6, height: 6, decoration: BoxDecoration(color: c, shape: BoxShape.circle)),
+        _Pulse(
+          active: status == 'pending' || status == 'suggested' || status == 'new',
+          child: Container(width: 6, height: 6, decoration: BoxDecoration(color: c, shape: BoxShape.circle)),
+        ),
         const SizedBox(width: 5),
-        Text(status[0].toUpperCase() + status.substring(1),
-            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: c)),
+        PopOnChange(
+          value: status,
+          child: Text(status[0].toUpperCase() + status.substring(1), style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: c)),
+        ),
       ]),
     );
   }
@@ -492,11 +500,24 @@ class EmptyState extends StatelessWidget {
   Widget build(BuildContext context) => Padding(
         padding: const EdgeInsets.symmetric(vertical: 36),
         child: Column(children: [
-          Container(
-            width: 84,
-            height: 84,
-            decoration: BoxDecoration(shape: BoxShape.circle, color: C.primarySoft, border: Border.all(color: C.primary.withValues(alpha: 0.2))),
-            child: Icon(icon, size: 36, color: C.primary),
+          _Floating(
+            child: SizedBox(
+              width: 120,
+              height: 120,
+              child: Stack(alignment: Alignment.center, children: [
+                if (!reduceMotion(context))
+                  Container(width: 84, height: 84, decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: C.primary.withValues(alpha: 0.35), width: 2)))
+                      .animate(onPlay: (c) => c.repeat())
+                      .scale(begin: const Offset(1, 1), end: const Offset(1.45, 1.45), duration: 2200.ms, curve: Curves.easeOut)
+                      .fadeOut(duration: 2200.ms, curve: Curves.easeOut),
+                Container(
+                  width: 84,
+                  height: 84,
+                  decoration: BoxDecoration(shape: BoxShape.circle, color: C.primarySoft, border: Border.all(color: C.primary.withValues(alpha: 0.2))),
+                  child: Icon(icon, size: 36, color: C.primary),
+                ),
+              ]),
+            ),
           ),
           const SizedBox(height: 18),
           Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18, letterSpacing: -0.3)),
@@ -596,4 +617,251 @@ class Stars extends StatelessWidget {
   Widget build(BuildContext context) => Row(mainAxisSize: MainAxisSize.min, children: [
         for (var i = 1; i <= 5; i++) Icon(i <= n ? Icons.star_rounded : Icons.star_border_rounded, size: 14, color: C.amber),
       ]);
+}
+
+
+/// Gently drifts up and down. Used on empty-state icons so a quiet screen still feels alive.
+class _Floating extends StatelessWidget {
+  final Widget child;
+  const _Floating({required this.child});
+  @override
+  Widget build(BuildContext context) {
+    if (reduceMotion(context)) return child;
+    return child
+        .animate()
+        .scale(begin: const Offset(0.85, 0.85), end: const Offset(1, 1), duration: 520.ms, curve: Curves.easeOutBack)
+        .fadeIn(duration: 380.ms)
+        .then()
+        .animate(onPlay: (c) => c.repeat(reverse: true))
+        .moveY(begin: -4, end: 4, duration: 2400.ms, curve: Curves.easeInOut);
+  }
+}
+
+/// A soft breathing glow for status dots that need attention.
+class _Pulse extends StatelessWidget {
+  final bool active;
+  final Widget child;
+  const _Pulse({required this.active, required this.child});
+  @override
+  Widget build(BuildContext context) {
+    if (!active || reduceMotion(context)) return child;
+    return child.animate(onPlay: (c) => c.repeat(reverse: true)).scale(begin: const Offset(0.8, 0.8), end: const Offset(1.35, 1.35), duration: 900.ms, curve: Curves.easeInOut).fade(begin: 0.55, end: 1, duration: 900.ms);
+  }
+}
+
+/// A short, centred confirmation: a circle pops in and a tick draws itself, then it fades away.
+void showSuccess(BuildContext context, String text, {bool confetti = true}) {
+  if (confetti) showConfetti(context);
+  final overlay = Overlay.maybeOf(context, rootOverlay: true);
+  if (overlay == null) {
+    showMsg(context, text);
+    return;
+  }
+  HapticFeedback.mediumImpact();
+  late OverlayEntry entry;
+  entry = OverlayEntry(builder: (_) => _SuccessToast(text: text, onDone: () => entry.remove()));
+  overlay.insert(entry);
+}
+
+class _SuccessToast extends StatefulWidget {
+  final String text;
+  final VoidCallback onDone;
+  const _SuccessToast({required this.text, required this.onDone});
+  @override
+  State<_SuccessToast> createState() => _SuccessToastState();
+}
+
+class _SuccessToastState extends State<_SuccessToast> with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(vsync: this, duration: const Duration(milliseconds: 1900))..forward().whenComplete(widget.onDone);
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => IgnorePointer(
+        child: AnimatedBuilder(
+          animation: _c,
+          builder: (context, _) {
+            final t = _c.value;
+            final pop = Curves.easeOutBack.transform((t / 0.22).clamp(0.0, 1.0));
+            final tick = Curves.easeOutCubic.transform(((t - 0.12) / 0.3).clamp(0.0, 1.0));
+            final fade = t > 0.8 ? 1 - (t - 0.8) / 0.2 : 1.0;
+            return Material(
+              color: Colors.transparent,
+              child: Opacity(
+                opacity: fade.clamp(0.0, 1.0),
+                child: Center(
+                  child: Transform.scale(
+                    scale: 0.6 + 0.4 * pop,
+                    child: Container(
+                      padding: const EdgeInsets.fromLTRB(28, 24, 28, 20),
+                      decoration: BoxDecoration(color: C.dark ? C.surface2 : const Color(0xF2171722), borderRadius: BorderRadius.circular(26), boxShadow: const [BoxShadow(color: Color(0x40000000), blurRadius: 30, offset: Offset(0, 12))]),
+                      child: Column(mainAxisSize: MainAxisSize.min, children: [
+                        SizedBox(width: 56, height: 56, child: CustomPaint(painter: _TickPainter(tick, C.green))),
+                        const SizedBox(height: 12),
+                        Text(widget.text, style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w800)),
+                      ]),
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+      );
+}
+
+class _TickPainter extends CustomPainter {
+  final double t;
+  final Color color;
+  _TickPainter(this.t, this.color);
+  @override
+  void paint(Canvas canvas, Size size) {
+    final ring = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 4
+      ..strokeCap = StrokeCap.round
+      ..color = color.withValues(alpha: 0.28);
+    canvas.drawCircle(size.center(Offset.zero), size.width / 2 - 2, ring);
+    final p = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 5
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round
+      ..color = color;
+    final path = Path()
+      ..moveTo(size.width * 0.28, size.height * 0.52)
+      ..lineTo(size.width * 0.44, size.height * 0.68)
+      ..lineTo(size.width * 0.74, size.height * 0.36);
+    for (final m in path.computeMetrics()) {
+      canvas.drawPath(m.extractPath(0, m.length * t), p);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_TickPainter o) => o.t != t;
+}
+
+
+// ---------------------------------------------------------------------------
+// Drag and drop
+// ---------------------------------------------------------------------------
+
+/// One place a dragged card can be dropped, e.g. a status.
+class DropZone {
+  final String id, label;
+  final Color color;
+  final IconData icon;
+  const DropZone(this.id, this.label, this.color, this.icon);
+}
+
+/// Long-press a card, lift it, and drop it on a [DropZoneBar]. Tapping still works as before.
+class DragCard<T extends Object> extends StatelessWidget {
+  final T data;
+  final Widget child;
+  final VoidCallback onStart, onEnd;
+  const DragCard({super.key, required this.data, required this.child, required this.onStart, required this.onEnd});
+
+  @override
+  Widget build(BuildContext context) {
+    final w = MediaQuery.of(context).size.width - 44;
+    return LongPressDraggable<T>(
+      data: data,
+      delay: const Duration(milliseconds: 260),
+      hapticFeedbackOnStart: true,
+      maxSimultaneousDrags: 1,
+      onDragStarted: onStart,
+      onDragEnd: (_) => onEnd(),
+      feedback: Material(
+        color: Colors.transparent,
+        child: SizedBox(
+          width: w,
+          child: Transform.rotate(
+            angle: 0.015,
+            child: Container(
+              decoration: BoxDecoration(borderRadius: BorderRadius.circular(rLg), boxShadow: const [BoxShadow(color: Color(0x44000000), blurRadius: 30, offset: Offset(0, 14))]),
+              child: Opacity(opacity: 0.97, child: child),
+            ),
+          ),
+        ),
+      ),
+      childWhenDragging: Opacity(opacity: 0.28, child: child),
+      child: child,
+    );
+  }
+}
+
+/// Drop targets that slide down from the top while a card is being dragged. Dropping on one calls [onDrop].
+class DropZoneBar<T extends Object> extends StatelessWidget {
+  final bool show;
+  final List<DropZone> zones;
+  final void Function(T item, String zoneId) onDrop;
+  final bool Function(T item, String zoneId)? canDrop;
+  const DropZoneBar({super.key, required this.show, required this.zones, required this.onDrop, this.canDrop});
+
+  @override
+  Widget build(BuildContext context) {
+    final slow = reduceMotion(context);
+    return IgnorePointer(
+      ignoring: !show,
+      child: AnimatedSlide(
+        offset: show ? Offset.zero : const Offset(0, -1.4),
+        duration: slow ? Duration.zero : const Duration(milliseconds: 380),
+        curve: Curves.easeOutBack,
+        child: AnimatedOpacity(
+          opacity: show ? 1 : 0,
+          duration: slow ? Duration.zero : const Duration(milliseconds: 220),
+          child: Container(
+            margin: const EdgeInsets.fromLTRB(14, 6, 14, 0),
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: C.surface.withValues(alpha: 0.97),
+              borderRadius: BorderRadius.circular(22),
+              border: Border.all(color: C.border),
+              boxShadow: const [BoxShadow(color: Color(0x33000000), blurRadius: 24, offset: Offset(0, 10))],
+            ),
+            child: Row(children: [
+              for (var i = 0; i < zones.length; i++) ...[
+                if (i > 0) const SizedBox(width: 6),
+                Expanded(child: _zone(context, zones[i])),
+              ],
+            ]),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _zone(BuildContext context, DropZone z) => DragTarget<T>(
+        onWillAcceptWithDetails: (d) => canDrop?.call(d.data, z.id) ?? true,
+        onAcceptWithDetails: (d) {
+          HapticFeedback.mediumImpact();
+          onDrop(d.data, z.id);
+        },
+        builder: (context, candidate, rejected) {
+          final hot = candidate.isNotEmpty;
+          final blocked = rejected.isNotEmpty;
+          return AnimatedContainer(
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeOutCubic,
+            transform: Matrix4.identity()..scale(hot ? 1.06 : 1.0),
+            transformAlignment: Alignment.center,
+            padding: const EdgeInsets.symmetric(vertical: 11),
+            decoration: BoxDecoration(
+              color: hot ? z.color : z.color.withValues(alpha: blocked ? 0.05 : 0.13),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: z.color.withValues(alpha: hot ? 1 : 0.35), width: hot ? 2 : 1),
+              boxShadow: hot ? [BoxShadow(color: z.color.withValues(alpha: 0.45), blurRadius: 16, offset: const Offset(0, 5))] : null,
+            ),
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              Icon(z.icon, size: 20, color: hot ? Colors.white : z.color),
+              const SizedBox(height: 3),
+              Text(z.label, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w800, color: hot ? Colors.white : z.color)),
+            ]),
+          );
+        },
+      );
 }

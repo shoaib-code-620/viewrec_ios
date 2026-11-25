@@ -66,13 +66,9 @@ ThemeData buildTheme({required bool dark}) {
       onSurface: C.text,
       error: C.rec,
     ),
-    pageTransitionsTheme: const PageTransitionsTheme(builders: {
-      TargetPlatform.android: FadeThroughPageTransitionsBuilder(),
-      TargetPlatform.iOS: FadeThroughPageTransitionsBuilder(),
-      TargetPlatform.windows: FadeThroughPageTransitionsBuilder(),
-      TargetPlatform.macOS: FadeThroughPageTransitionsBuilder(),
-      TargetPlatform.linux: FadeThroughPageTransitionsBuilder(),
-      TargetPlatform.fuchsia: FadeThroughPageTransitionsBuilder(),
+    // Opening a page slides it in from the side and fades, so moving forward and back feels directional.
+    pageTransitionsTheme: PageTransitionsTheme(builders: {
+      for (final p in TargetPlatform.values) p: SharedAxisPageTransitionsBuilder(transitionType: SharedAxisTransitionType.horizontal, fillColor: C.bg),
     }),
     appBarTheme: AppBarTheme(
       backgroundColor: C.bg,

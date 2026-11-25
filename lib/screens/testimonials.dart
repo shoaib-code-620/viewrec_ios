@@ -17,6 +17,7 @@ class TestimonialsScreen extends StatefulWidget {
 class _TestimonialsScreenState extends State<TestimonialsScreen> {
   static const filters = ['All', 'Waiting', 'Approved', 'Published', 'Video', 'Written'];
   int f = 0;
+  bool dragging = false;
 
   bool _match(Video v) => switch (f) {
         1 => v.status == 'pending',
@@ -34,7 +35,8 @@ class _TestimonialsScreenState extends State<TestimonialsScreen> {
           final shown = items.where(_match).toList();
           final avg = items.isEmpty ? 0.0 : items.map((v) => v.rating).reduce((a, b) => a + b) / items.length;
           final waiting = items.where((v) => v.status == 'pending').length;
-          return RefreshIndicator(
+          return Stack(children: [
+            RefreshIndicator(
             color: C.primary,
             onRefresh: refresh,
             child: AppPage(reveal: false, children: [
@@ -53,21 +55,58 @@ class _TestimonialsScreenState extends State<TestimonialsScreen> {
                     for (var i = 0; i < shown.length; i++)
                       Padding(
                         padding: const EdgeInsets.only(bottom: 16),
-                        child: _TestimonialCard(
-                          video: shown[i],
-                          onTap: () async {
-                            await Navigator.of(context).push(MaterialPageRoute(builder: (_) => VideoDetailScreen(video: shown[i])));
-                            if (mounted) refresh();
-                          },
+                        child: _draggable(
+                          shown[i],
+                          _TestimonialCard(
+                            video: shown[i],
+                            onTap: () async {
+                              await Navigator.of(context).push(MaterialPageRoute(builder: (_) => VideoDetailScreen(video: shown[i])));
+                              if (mounted) refresh();
+                            },
+                          ),
                         ).reveal(context, 2 + i, 0.1),
                       ),
                   ],
                 ),
               ),
             ]),
-          );
+            ),
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: DropZoneBar<Video>(
+                show: dragging,
+                zones: [DropZone('approved', 'Approve', C.green, Icons.check_circle_rounded)],
+                canDrop: (v, id) => v.status == 'pending',
+                onDrop: (v, id) async {
+                  setState(() => v.status = 'approved');
+                  showSuccess(context, '${v.name} approved');
+                  try {
+                    await repo.updateVideo(v.id, status: 'approved');
+                  } catch (_) {
+                    if (mounted) {
+                      setState(() => v.status = 'pending');
+                      showMsg(context, "Couldn't approve. Try again.");
+                    }
+                  }
+                },
+              ),
+            ),
+          ]);
         },
       );
+
+  /// Only waiting testimonials can be dragged, to be approved.
+  Widget _draggable(Video v, Widget card) {
+    if (v.status != 'pending') return card;
+    return DragCard<Video>(
+      data: v,
+      onStart: () => setState(() => dragging = true),
+      onEnd: () => setState(() => dragging = false),
+      child: card,
+    );
+  }
 
   Widget _summary(BuildContext context, int count, double avg, int waiting) => AppCard(
         child: Row(children: [

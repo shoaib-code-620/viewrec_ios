@@ -47,6 +47,19 @@ final screens = <String, Widget Function()>{
   'Notifications': () => const NotificationsScreen(),
   'Assistant': () => const AssistantScreen(),
   'Help': () => const HelpScreen(),
+  'Gallery': () => const Shell(initialIndex: 15),
+  'Contact bundles': () => const Shell(initialIndex: 16),
+  'Calendar': () => const Shell(initialIndex: 17),
+  'Review templates': () => const Shell(initialIndex: 18),
+  'Verification': () => const Shell(initialIndex: 19),
+  'Review requests': () => const Shell(initialIndex: 20),
+  'Referral hub': () => const Shell(initialIndex: 21),
+  'Video settings': () => const Shell(initialIndex: 22),
+  'Embeds': () => const Shell(initialIndex: 23),
+  'Support chat': () => const Shell(initialIndex: 24),
+  'Security': () => const Shell(initialIndex: 25),
+  'Marketing email': () => const Shell(initialIndex: 26),
+  'Workspaces': () => const Shell(initialIndex: 27),
   'Insights': () => const InsightsScreen(),
   'Pricing': () => const PricingScreen(),
   'Invite composer': () => const InviteComposerScreen(to: 'Sarah Mitchell'),
@@ -106,8 +119,13 @@ void main() {
           ));
           await tester.pump(const Duration(seconds: 2));
           await tester.pump(const Duration(milliseconds: 700));
+          // Entrance animations that start late (shimmer, pulses) must finish before the test ends.
+          await tester.pump(const Duration(seconds: 5));
           FlutterError.onError = previous;
           if (captured.isNotEmpty) {
+            // Show what Flutter reported first, so a failing screen says why.
+            // ignore: avoid_print
+            print('FLUTTER ERROR: ${captured.first.exceptionAsString().split(String.fromCharCode(10)).take(4).join(' | ')}');
             final found = <String>{};
             void texts(RenderObject r, List<String> out) {
               if (out.length >= 3) return;

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../calls.dart';
 import '../data.dart';
 import '../repo.dart';
 import '../theme.dart';
@@ -74,7 +75,7 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
       Center(child: StatusBadge(c.status)),
       const SizedBox(height: 18),
       Row(children: [
-        Expanded(child: AppButton('Call', icon: Icons.call_rounded, small: true, style: BtnStyle.ghost, onTap: () => showMsg(context, 'Calling ${c.name}…'))),
+        Expanded(child: AppButton('Call', icon: Icons.call_rounded, small: true, style: BtnStyle.ghost, onTap: () => callPhone(context, name: c.name, phone: c.phone))),
         const SizedBox(width: 8),
         Expanded(child: AppButton('Message', icon: Icons.sms_rounded, small: true, style: BtnStyle.ghost, onTap: () => showMsg(context, 'Opening messages…'))),
         const SizedBox(width: 8),

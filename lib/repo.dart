@@ -43,6 +43,14 @@ abstract class Repo {
 
   Future<List<ThreadMessage>> leadMessages(String leadId);
   Future<ThreadMessage> sendLeadMessage(String leadId, String text);
+  /// Send a photo, file or voice note in a conversation. [kind] is 'image', 'file' or 'voice'.
+  Future<ThreadMessage> sendLeadAttachment(String leadId, {required String kind, required String path, required String name, int size = 0, int durationMs = 0, void Function(double)? onProgress});
+  /// Change the text of a message you sent. The other person sees it marked as edited.
+  Future<ThreadMessage> editLeadMessage(String leadId, String messageId, String text);
+  /// Remove a message you sent, for everyone in the conversation.
+  Future<void> deleteLeadMessage(String leadId, String messageId);
+  /// Note in the conversation that you called this person.
+  Future<ThreadMessage> logLeadCall(String leadId);
 
   /// platformId -> account display name (only connected ones are present).
   Future<Map<String, String>> accounts();
@@ -70,6 +78,8 @@ const demoInviteToken = 'tok_sarah';
 
 const _apiUrl = String.fromEnvironment('API_URL');
 bool get usingMock => _apiUrl.isEmpty;
+/// The address of the real API, or empty when the app runs on sample data.
+String get apiBaseUrl => _apiUrl;
 
 final Repo repo = usingMock ? MockRepo() : ApiRepo(_apiUrl);
 
@@ -94,11 +104,11 @@ class MockRepo implements Repo {
     'yt': 'Hartley Roofing',
   };
   final _leads = [
-    Lead(id: 'l1', name: 'Rebecca Shaw', service: 'Roof inspection', message: 'Hi, I saw your video reviews. Can someone look at a leak above our bay window this week?', when: '12 min ago', source: 'Directory', status: 'new'),
-    Lead(id: 'l2', name: 'Imran Qureshi', service: 'Gutter replacement', message: 'Looking for a quote for a 3-bed semi. Photos available.', when: '2 h ago', source: 'Review page', status: 'new'),
-    Lead(id: 'l3', name: 'Claire Dubois', service: 'Chimney repair', message: 'Recommended by a neighbour. Free on Thursday morning.', when: 'Yesterday', source: 'Website embed', status: 'contacted'),
-    Lead(id: 'l4', name: 'Pete Warren', service: 'Skylight install', message: 'Thanks, we went with another firm.', when: '3 days ago', source: 'Directory', status: 'lost'),
-    Lead(id: 'l5', name: 'Nadia Aziz', service: 'Full re-roof', message: 'Accepted your quote.', when: 'Last week', source: 'Review page', status: 'won'),
+    Lead(id: 'l1', phone: '+44 7700 800211', name: 'Rebecca Shaw', service: 'Roof inspection', message: 'Hi, I saw your video reviews. Can someone look at a leak above our bay window this week?', when: '12 min ago', source: 'Directory', status: 'new'),
+    Lead(id: 'l2', phone: '+44 7700 800422', name: 'Imran Qureshi', service: 'Gutter replacement', message: 'Looking for a quote for a 3-bed semi. Photos available.', when: '2 h ago', source: 'Review page', status: 'new'),
+    Lead(id: 'l3', phone: '+44 7700 800633', name: 'Claire Dubois', service: 'Chimney repair', message: 'Recommended by a neighbour. Free on Thursday morning.', when: 'Yesterday', source: 'Website embed', status: 'contacted'),
+    Lead(id: 'l4', phone: '+44 7700 800844', name: 'Pete Warren', service: 'Skylight install', message: 'Thanks, we went with another firm.', when: '3 days ago', source: 'Directory', status: 'lost'),
+    Lead(id: 'l5', phone: '+44 7700 801055', name: 'Nadia Aziz', service: 'Full re-roof', message: 'Accepted your quote.', when: 'Last week', source: 'Review page', status: 'won'),
   ];
   var _automations = AutomationSettings();
   var _profile = BusinessProfile(
@@ -197,7 +207,77 @@ class MockRepo implements Repo {
     _threads.putIfAbsent(leadId, () => []).add(m);
     final lead = _leads.firstWhere((l) => l.id == leadId);
     if (lead.status == 'new') lead.status = 'contacted';
+    lead.lastNote = 'You: $text';
+    _simulateReceipts(m);
     return _wait(m);
+  }
+
+  /// Demo only: a real server marks a message delivered when the other phone gets it, and read when they open it.
+  void _simulateReceipts(ThreadMessage m) {
+    m.status = 'sent';
+    Future<void>.delayed(const Duration(milliseconds: 1500), () => m.status = 'delivered');
+    Future<void>.delayed(const Duration(milliseconds: 4200), () => m.status = 'read');
+  }
+
+  void _refreshLastNote(String leadId) {
+    final lead = _leads.firstWhere((l) => l.id == leadId);
+    final list = _threads[leadId] ?? [];
+    final last = list.where((m) => m.kind != 'call').isEmpty ? null : list.where((m) => m.kind != 'call').last;
+    if (last == null || last.id == 'm0') {
+      lead.lastNote = null;
+      return;
+    }
+    final mine = last.from == 'business' ? 'You: ' : '';
+    final secs = (last.durationMs / 1000).round();
+    lead.lastNote = switch (last.kind) {
+      'voice' => '${mine}Voice note ${secs ~/ 60}:${(secs % 60).toString().padLeft(2, '0')}',
+      'image' => '${mine}Photo',
+      'file' => '$mine${last.fileName}',
+      _ => '$mine${last.text}',
+    };
+  }
+
+  @override
+  Future<ThreadMessage> editLeadMessage(String leadId, String messageId, String text) async {
+    final m = (_threads[leadId] ?? []).firstWhere((x) => x.id == messageId);
+    m.text = text;
+    m.edited = true;
+    _refreshLastNote(leadId);
+    return _wait(m);
+  }
+
+  @override
+  Future<void> deleteLeadMessage(String leadId, String messageId) async {
+    (_threads[leadId] ?? []).removeWhere((x) => x.id == messageId);
+    _refreshLastNote(leadId);
+    await _wait(null);
+  }
+
+  @override
+  Future<ThreadMessage> logLeadCall(String leadId) async {
+    final m = ThreadMessage(id: DateTime.now().millisecondsSinceEpoch.toString(), from: 'business', text: 'You called', when: 'just now', kind: 'call');
+    _threads.putIfAbsent(leadId, () => []).add(m);
+    return _wait(m);
+  }
+
+  @override
+  Future<ThreadMessage> sendLeadAttachment(String leadId, {required String kind, required String path, required String name, int size = 0, int durationMs = 0, void Function(double)? onProgress}) async {
+    final m = ThreadMessage(id: DateTime.now().millisecondsSinceEpoch.toString(), from: 'business', text: '', when: 'just now', kind: kind, fileName: name, path: path, sizeBytes: size, durationMs: durationMs);
+    _threads.putIfAbsent(leadId, () => []).add(m);
+    final lead = _leads.firstWhere((l) => l.id == leadId);
+    if (lead.status == 'new') lead.status = 'contacted';
+    final secs = (durationMs / 1000).round();
+    lead.lastNote = switch (kind) {
+      'voice' => 'You: Voice note ${secs ~/ 60}:${(secs % 60).toString().padLeft(2, '0')}',
+      'image' => 'You: Photo',
+      _ => 'You: $name',
+    };
+    _simulateReceipts(m);
+    for (var i = 1; i <= 4; i++) {
+      onProgress?.call(i / 4);
+      await Future<void>.delayed(const Duration(milliseconds: 90));
+    }
+    return m;
   }
 
   // ---- Media
@@ -441,6 +521,42 @@ class ApiRepo implements Repo {
   @override
   Future<ThreadMessage> sendLeadMessage(String leadId, String text) async =>
       ThreadMessage.fromJson(await _send('POST', '/api/leads/$leadId/messages', {'text': text}));
+
+  // NOTE: assumes PATCH/DELETE /api/leads/{id}/messages/{messageId} and POST /api/leads/{id}/calls.
+  @override
+  Future<ThreadMessage> editLeadMessage(String leadId, String messageId, String text) async =>
+      ThreadMessage.fromJson(await _send('PATCH', '/api/leads/$leadId/messages/$messageId', {'text': text}));
+
+  @override
+  Future<void> deleteLeadMessage(String leadId, String messageId) => _send('DELETE', '/api/leads/$leadId/messages/$messageId');
+
+  @override
+  Future<ThreadMessage> logLeadCall(String leadId) async => ThreadMessage.fromJson(await _send('POST', '/api/leads/$leadId/calls'));
+
+  // NOTE: assumes the backend accepts POST /api/leads/{id}/messages/attachment as multipart (file, kind, durationMs).
+  @override
+  Future<ThreadMessage> sendLeadAttachment(String leadId, {required String kind, required String path, required String name, int size = 0, int durationMs = 0, void Function(double)? onProgress}) async {
+    final req = http.MultipartRequest('POST', _u('/api/leads/$leadId/messages/attachment'))
+      ..fields['kind'] = kind
+      ..fields['durationMs'] = '$durationMs'
+      ..files.add(await http.MultipartFile.fromPath('file', path, filename: name));
+    http.StreamedResponse res;
+    try {
+      res = await req.send().timeout(const Duration(minutes: 3));
+    } catch (_) {
+      throw Exception('Could not reach the server. Check your connection and try again.');
+    }
+    final body = await res.stream.bytesToString();
+    if (res.statusCode >= 400) {
+      String msg = 'Upload failed (${res.statusCode})';
+      try {
+        msg = jsonDecode(body)['error'] ?? msg;
+      } catch (_) {}
+      throw Exception(msg);
+    }
+    onProgress?.call(1);
+    return ThreadMessage.fromJson(jsonDecode(body));
+  }
 
   // ---- Media
   @override

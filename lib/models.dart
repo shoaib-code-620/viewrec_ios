@@ -34,7 +34,11 @@ class OverviewStats {
 class Lead {
   final String id, name, service, message, when, source;
   String status; // new | contacted | won | lost
-  Lead({required this.id, required this.name, required this.service, required this.message, required this.when, required this.source, required this.status});
+  /// Latest thing said in the conversation when it was not the first message, e.g. "You: On my way" or "Voice note 0:12".
+  String? lastNote;
+  /// The person's phone number, if they gave one. Needed to call them.
+  final String phone;
+  Lead({required this.id, required this.name, required this.service, required this.message, required this.when, required this.source, required this.status, this.lastNote, this.phone = ''});
   factory Lead.fromJson(Map<String, dynamic> j) => Lead(
         id: '${j['id']}',
         name: j['name'] ?? '',
@@ -43,6 +47,7 @@ class Lead {
         when: j['when'] ?? '',
         source: j['source'] ?? '',
         status: j['status'] ?? 'new',
+        phone: j['phone'] ?? '',
       );
 }
 
@@ -213,12 +218,41 @@ class InsightsData {
 }
 
 class ThreadMessage {
-  final String id, from, text, when; // from: customer | business
-  const ThreadMessage({required this.id, required this.from, required this.text, required this.when});
+  final String id, from, when; // from: customer | business
+  String text;
+  /// text | image | file | voice | call
+  final String kind;
+  /// For attachments: the file name, where the file is (a path on this phone or a web address), its size and, for voice notes, its length.
+  final String fileName, path;
+  final int sizeBytes, durationMs;
+  /// For messages you sent: sending | sent | delivered | read | failed.
+  String status;
+  /// True once the text was changed after sending.
+  bool edited;
+  ThreadMessage({
+    required this.id,
+    required this.from,
+    required this.text,
+    required this.when,
+    this.kind = 'text',
+    this.fileName = '',
+    this.path = '',
+    this.sizeBytes = 0,
+    this.durationMs = 0,
+    this.status = 'sent',
+    this.edited = false,
+  });
   factory ThreadMessage.fromJson(Map<String, dynamic> j) => ThreadMessage(
         id: '${j['id']}',
         from: j['from'] ?? 'customer',
         text: j['text'] ?? '',
         when: j['when'] ?? '',
+        kind: j['kind'] ?? 'text',
+        fileName: j['fileName'] ?? '',
+        path: j['url'] ?? '',
+        sizeBytes: j['size'] ?? 0,
+        durationMs: j['durationMs'] ?? 0,
+        status: j['status'] ?? 'sent',
+        edited: j['edited'] == true,
       );
 }

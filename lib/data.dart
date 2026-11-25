@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 
 class Customer {
   final String id, name, job, date, reason;
+  /// Mobile number, if known. Needed to call them.
+  final String phone;
   String status; // suggested | approved | invited | recorded | skipped
   Customer({
+    this.phone = '',
     required this.id,
     required this.name,
     required this.job,
@@ -19,6 +22,7 @@ class Customer {
         date: j['date'] ?? '',
         reason: j['reason'] ?? '',
         status: j['status'] ?? 'suggested',
+        phone: j['phone'] ?? '',
       );
 }
 
@@ -62,12 +66,12 @@ class Video {
 Color _hex(String s) => Color(int.parse('FF${s.replaceAll('#', '')}', radix: 16));
 
 List<Customer> demoCustomers() => [
-      Customer(id: '1', name: 'Sarah Mitchell', job: 'Roof replacement', date: '12 days ago', reason: 'Recent job, replied to your last email', status: 'suggested'),
-      Customer(id: '2', name: 'Daniel Okafor', job: 'Gutter repair', date: '3 weeks ago', reason: 'Left a 5-star Google review', status: 'suggested'),
-      Customer(id: '3', name: 'Priya Nair', job: 'Full re-roof', date: '1 month ago', reason: 'Repeat customer', status: 'approved'),
-      Customer(id: '4', name: 'Tom Hendricks', job: 'Chimney flashing', date: '5 weeks ago', reason: 'Recent job', status: 'invited'),
-      Customer(id: '5', name: 'Lena Fischer', job: 'Skylight install', date: '6 weeks ago', reason: 'Referred two neighbours', status: 'recorded'),
-      Customer(id: '6', name: 'Marcus Webb', job: 'Storm damage repair', date: '2 months ago', reason: 'Job went badly - dispute open', status: 'skipped'),
+      Customer(id: '1', phone: '+44 7700 900137', name: 'Sarah Mitchell', job: 'Roof replacement', date: '12 days ago', reason: 'Recent job, replied to your last email', status: 'suggested'),
+      Customer(id: '2', phone: '+44 7700 900274', name: 'Daniel Okafor', job: 'Gutter repair', date: '3 weeks ago', reason: 'Left a 5-star Google review', status: 'suggested'),
+      Customer(id: '3', phone: '+44 7700 900411', name: 'Priya Nair', job: 'Full re-roof', date: '1 month ago', reason: 'Repeat customer', status: 'approved'),
+      Customer(id: '4', phone: '+44 7700 900548', name: 'Tom Hendricks', job: 'Chimney flashing', date: '5 weeks ago', reason: 'Recent job', status: 'invited'),
+      Customer(id: '5', phone: '+44 7700 900685', name: 'Lena Fischer', job: 'Skylight install', date: '6 weeks ago', reason: 'Referred two neighbours', status: 'recorded'),
+      Customer(id: '6', phone: '+44 7700 900822', name: 'Marcus Webb', job: 'Storm damage repair', date: '2 months ago', reason: 'Job went badly - dispute open', status: 'skipped'),
     ];
 
 List<Video> demoVideos() => [

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter/services.dart';
 import '../icons.dart';
 import '../async_view.dart';
@@ -9,6 +10,8 @@ import '../repo.dart';
 import '../shell.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../entitlement.dart';
 import '../media_data.dart';
 import 'insights.dart';
 import 'media.dart' show StoriesRow;
@@ -49,7 +52,10 @@ class OverviewScreen extends StatelessWidget {
         StoriesRow(stories: stories),
         const SizedBox(height: 6),
       ],
-      _hero(context, s).reveal(context, n++),
+      EntitlementBanner(onBilling: () => shell.goTo(9)),
+      reduceMotion(context)
+          ? _hero(context, s).reveal(context, n++)
+          : _hero(context, s).reveal(context, n++).animate().shimmer(delay: 1100.ms, duration: 1500.ms, color: Colors.white.withValues(alpha: 0.16), angle: 0.6),
       const SizedBox(height: 18),
       _quickActions(context).reveal(context, n++),
       const SizedBox(height: 18),
@@ -116,15 +122,18 @@ class OverviewScreen extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(22, 22, 22, 18),
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Row(children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
-                    decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.16), borderRadius: BorderRadius.circular(999)),
-                    child: const Row(mainAxisSize: MainAxisSize.min, children: [
-                      Icon(PIconsBold.videoCamera, size: 13, color: Colors.white),
-                      SizedBox(width: 6),
-                      Text('Video testimonials', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: Colors.white)),
-                    ]),
+                  Flexible(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
+                      decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.16), borderRadius: BorderRadius.circular(999)),
+                      child: const Row(mainAxisSize: MainAxisSize.min, children: [
+                        Icon(PIconsBold.videoCamera, size: 13, color: Colors.white),
+                        SizedBox(width: 6),
+                        Flexible(child: Text('Videos', maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: Colors.white))),
+                      ]),
+                    ),
                   ),
+                  const SizedBox(width: 8),
                   const Spacer(),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
@@ -195,27 +204,7 @@ class OverviewScreen extends StatelessWidget {
       (PIconsFill.qrCode, 'QR', const Color(0xFFB265FF), () => shell.goTo(6)),
       (PIconsFill.playCircle, 'Preview', C.rec, () => shell.push(const RecordScreen())),
     ];
-    return Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-      for (var i = 0; i < items.length; i++)
-        Pressable(
-          onTap: items[i].$4,
-          scale: 0.92,
-          child: Column(children: [
-            Container(
-              width: 58,
-              height: 58,
-              decoration: BoxDecoration(
-                color: items[i].$3.withValues(alpha: C.dark ? 0.16 : 0.12),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: items[i].$3.withValues(alpha: 0.2)),
-              ),
-              child: Icon(items[i].$1, color: items[i].$3, size: 26),
-            ),
-            const SizedBox(height: 7),
-            Text(items[i].$2, style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: C.muted)),
-          ]),
-        ),
-    ]);
+    return _QuickActions(items: items);
   }
 
   // ---------- compact metric ----------
@@ -353,4 +342,112 @@ class _StoryCard extends StatelessWidget {
           ]),
         ),
       );
+}
+
+
+/// The row of quick-send buttons. Hold one and drop it on another to change the order; the order is remembered.
+class _QuickActions extends StatefulWidget {
+  final List<(IconData, String, Color, VoidCallback)> items;
+  const _QuickActions({required this.items});
+  @override
+  State<_QuickActions> createState() => _QuickActionsState();
+}
+
+class _QuickActionsState extends State<_QuickActions> {
+  static const _key = 'home_quick_order';
+  late List<String> order = [for (final i in widget.items) i.$2];
+  String? dragging, over;
+
+  @override
+  void initState() {
+    super.initState();
+    SharedPreferences.getInstance().then((p) {
+      final saved = p.getStringList(_key);
+      final names = {for (final i in widget.items) i.$2};
+      if (saved != null && saved.length == names.length && saved.every(names.contains) && mounted) setState(() => order = saved);
+    }).catchError((_) {});
+  }
+
+  void _move(String from, String to) {
+    if (from == to) return;
+    final next = List.of(order);
+    final fi = next.indexOf(from);
+    next.removeAt(fi);
+    next.insert(next.indexOf(to) + (fi < next.indexOf(to) ? 1 : 0), from);
+    HapticFeedback.mediumImpact();
+    setState(() => order = next);
+    SharedPreferences.getInstance().then((p) => p.setStringList(_key, next)).catchError((_) => false);
+  }
+
+  Widget _tile((IconData, String, Color, VoidCallback) it, {bool lifted = false, bool target = false}) => Column(children: [
+        AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOutCubic,
+          width: 58,
+          height: 58,
+          decoration: BoxDecoration(
+            color: it.$3.withValues(alpha: C.dark ? 0.16 : 0.12),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: it.$3.withValues(alpha: target ? 0.9 : 0.2), width: target ? 2 : 1),
+            boxShadow: lifted ? [BoxShadow(color: it.$3.withValues(alpha: 0.4), blurRadius: 20, offset: const Offset(0, 8))] : null,
+          ),
+          child: Icon(it.$1, color: it.$3, size: 26),
+        ),
+        const SizedBox(height: 7),
+        Text(it.$2, style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: C.muted)),
+      ]);
+
+  @override
+  Widget build(BuildContext context) {
+    final byName = {for (final i in widget.items) i.$2: i};
+    return Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+      for (final name in order)
+        _popIn(
+          order.indexOf(name),
+          DragTarget<String>(
+          onWillAcceptWithDetails: (d) => d.data != name,
+          onMove: (_) {
+            if (over != name) setState(() => over = name);
+          },
+          onLeave: (_) {
+            if (over == name) setState(() => over = null);
+          },
+          onAcceptWithDetails: (d) {
+            setState(() => over = null);
+            _move(d.data, name);
+          },
+          builder: (context, cand, _) => LongPressDraggable<String>(
+            data: name,
+            delay: const Duration(milliseconds: 240),
+            hapticFeedbackOnStart: true,
+            onDragStarted: () => setState(() => dragging = name),
+            onDragEnd: (_) => setState(() {
+              dragging = null;
+              over = null;
+            }),
+            feedback: Material(
+              color: Colors.transparent,
+              child: Transform.scale(scale: 1.18, child: _tile(byName[name]!, lifted: true)),
+            ),
+            childWhenDragging: Opacity(opacity: 0.25, child: _tile(byName[name]!)),
+            child: Pressable(
+              onTap: byName[name]!.$4,
+              scale: 0.92,
+              child: AnimatedScale(
+                scale: cand.isNotEmpty ? 1.12 : 1,
+                duration: const Duration(milliseconds: 180),
+                curve: Curves.easeOutBack,
+                child: _tile(byName[name]!, target: cand.isNotEmpty),
+              ),
+            ),
+          ),
+        ),
+        ),
+    ]);
+  }
+
+  /// The buttons pop in one after another when Home opens.
+  Widget _popIn(int i, Widget w) => reduceMotion(context)
+      ? w
+      : w.animate(key: ValueKey('qa-${widget.items[i % widget.items.length].$2}'), delay: (180 + 80 * i).ms).scale(begin: const Offset(0.5, 0.5), end: const Offset(1, 1), duration: 480.ms, curve: Curves.easeOutBack).fadeIn(duration: 260.ms);
 }

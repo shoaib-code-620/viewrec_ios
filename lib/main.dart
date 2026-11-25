@@ -1,12 +1,15 @@
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:material_ui/material_ui.dart' as material_ui;
 import 'screens/welcome.dart';
 import 'theme.dart';
 import 'theme_controller.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Draw behind the status and navigation bars so the soft background runs edge to edge.
+  SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
   await ThemeController.instance.load();
   runApp(const ViewRecApp());
 }
@@ -51,6 +54,10 @@ class _ViewRecAppState extends State<ViewRecApp> {
       statusBarColor: Colors.transparent,
       statusBarIconBrightness: dark ? Brightness.light : Brightness.dark,
       statusBarBrightness: dark ? Brightness.dark : Brightness.light,
+      systemNavigationBarColor: Colors.transparent,
+      systemNavigationBarDividerColor: Colors.transparent,
+      systemNavigationBarContrastEnforced: false,
+      systemNavigationBarIconBrightness: dark ? Brightness.light : Brightness.dark,
     ));
     final t = buildTheme(dark: dark);
     return MaterialApp(
@@ -59,6 +66,8 @@ class _ViewRecAppState extends State<ViewRecApp> {
       theme: t,
       darkTheme: t,
       themeMode: dark ? ThemeMode.dark : ThemeMode.light,
+      // The photo editor is built on material_ui and needs its text and dialog translations.
+      localizationsDelegates: material_ui.GlobalMaterialLocalizations.delegates,
       // On the web, show a phone-width column so the preview looks like the real app.
       builder: kIsWeb
           ? (context, child) {

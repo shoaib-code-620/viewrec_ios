@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'motion.dart';
 import 'theme.dart';
 import 'widgets.dart';
 
@@ -21,7 +22,9 @@ class _AsyncViewState<T> extends State<AsyncView<T>> {
 
   Future<void> _refresh() async {
     final f = widget.load();
-    setState(() => _future = f);
+    setState(() {
+      _future = f;
+    });
     try {
       await f;
     } catch (_) {}
@@ -31,9 +34,19 @@ class _AsyncViewState<T> extends State<AsyncView<T>> {
   Widget build(BuildContext context) => FutureBuilder<T>(
         future: _future,
         builder: (context, snap) {
-          if (snap.connectionState != ConnectionState.done) return SkeletonList(cards: widget.skeletonCards);
-          if (snap.hasError) return ErrorState(message: snap.error.toString().replaceFirst('Exception: ', ''), onRetry: _refresh);
-          return widget.builder(context, snap.data as T, _refresh);
+          final loading = snap.connectionState != ConnectionState.done;
+          final Widget child = loading
+              ? SkeletonList(cards: widget.skeletonCards)
+              : snap.hasError
+                  ? ErrorState(message: snap.error.toString().replaceFirst('Exception: ', ''), onRetry: _refresh)
+                  : widget.builder(context, snap.data as T, _refresh);
+          // The placeholder cards dissolve into the real content instead of snapping.
+          return AnimatedSwitcher(
+            duration: reduceMotion(context) ? Duration.zero : const Duration(milliseconds: 380),
+            switchInCurve: Curves.easeOut,
+            switchOutCurve: Curves.easeIn,
+            child: KeyedSubtree(key: ValueKey(loading ? 'loading' : snap.hasError ? 'error' : 'data'), child: child),
+          );
         },
       );
 }

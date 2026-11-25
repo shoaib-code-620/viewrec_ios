@@ -72,7 +72,10 @@ class _StoriesRowState extends State<StoriesRow> {
           separatorBuilder: (_, __) => const SizedBox(width: 8),
           itemBuilder: (context, i) {
             final g = widget.stories[i];
-            return StoryRing(name: g.business, seen: g.seen, mine: g.mine, onTap: () => _openStory(g)).reveal(context, i, 0.1);
+            final ring = StoryRing(name: g.business, seen: g.seen, mine: g.mine, onTap: () => _openStory(g)).reveal(context, i, 0.1);
+            // A new story gives one small pulse so the eye finds it.
+            if (g.seen || g.mine || reduceMotion(context)) return ring;
+            return ring.animate(key: ValueKey('pulse-${g.id}'), delay: (700 + 140 * i).ms).scaleXY(begin: 1, end: 1.09, duration: 260.ms, curve: Curves.easeOut).then().scaleXY(begin: 1.09, end: 1, duration: 420.ms, curve: Curves.easeInOut);
           },
         ),
       );
@@ -96,7 +99,17 @@ class _MediaBodyState extends State<_MediaBody> {
   }
 
   void _openReel(List<Reel> list, Reel r) {
-    Navigator.of(context).push(MaterialPageRoute(builder: (_) => ReelsViewer(reels: list, startIndex: list.indexOf(r), onChanged: _refresh))).then((_) => _refresh());
+    // The player grows out of the feed and fades in, instead of sliding across.
+    Navigator.of(context).push(PageRouteBuilder(
+      opaque: true,
+      transitionDuration: const Duration(milliseconds: 420),
+      reverseTransitionDuration: const Duration(milliseconds: 300),
+      pageBuilder: (_, __, ___) => ReelsViewer(reels: list, startIndex: list.indexOf(r), onChanged: _refresh),
+      transitionsBuilder: (_, anim, __, child) => FadeTransition(
+        opacity: CurvedAnimation(parent: anim, curve: Curves.easeOut),
+        child: ScaleTransition(scale: Tween(begin: 0.9, end: 1.0).animate(CurvedAnimation(parent: anim, curve: Curves.easeOutCubic)), child: child),
+      ),
+    )).then((_) => _refresh());
   }
 
   @override
@@ -204,7 +217,7 @@ class _ReelCardState extends State<_ReelCard> {
             child: Container(
               decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [r.hue, Color.lerp(r.hue, Colors.black, 0.65)!])),
               child: Stack(children: [
-                if (r.mediaPath != null) Positioned.fill(child: MediaView(path: r.mediaPath, isVideo: r.isVideo, hue: r.hue, edits: r.edits)),
+                if (r.mediaPath != null) Positioned.fill(child: Parallax(child: MediaView(path: r.mediaPath, isVideo: r.isVideo, hue: r.hue, edits: r.edits))),
                 if (r.mediaPath == null || r.isVideo)
                 Center(
                   child: Container(
@@ -269,7 +282,10 @@ class _ReelCardState extends State<_ReelCard> {
         Padding(
           padding: const EdgeInsets.fromLTRB(6, 4, 8, 0),
           child: Row(children: [
-            _action(r.liked ? Icons.favorite_rounded : Icons.favorite_border_rounded, () => MediaActions.toggleLike(context, r, widget.onChanged), color: r.liked ? const Color(0xFFFF4F6A) : C.text, bounce: r.liked),
+            _action(r.liked ? Icons.favorite_rounded : Icons.favorite_border_rounded, () {
+              if (!r.liked) setState(() => burst++);
+              MediaActions.toggleLike(context, r, widget.onChanged);
+            }, color: r.liked ? const Color(0xFFFF4F6A) : C.text, bounce: r.liked),
             _action(Icons.chat_bubble_outline_rounded, () => showCommentsSheet(context, r, widget.onChanged)),
             _action(Icons.ios_share_rounded, () => MediaActions.share(context, r)),
             const Spacer(),
@@ -279,7 +295,12 @@ class _ReelCardState extends State<_ReelCard> {
         Padding(
           padding: const EdgeInsets.fromLTRB(14, 0, 14, 10),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('${compact(r.likes)} likes', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13.5)),
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 260),
+              transitionBuilder: (c, a) => FadeTransition(opacity: a, child: SlideTransition(position: Tween(begin: const Offset(0, 0.4), end: Offset.zero).animate(a), child: c)),
+              layoutBuilder: (current, previous) => Stack(alignment: Alignment.centerLeft, children: [...previous, if (current != null) current]),
+              child: Text('${compact(r.likes)} likes', key: ValueKey(r.likes), style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13.5)),
+            ),
             const SizedBox(height: 4),
             Text.rich(
               TextSpan(children: [

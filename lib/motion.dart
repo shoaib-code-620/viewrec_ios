@@ -13,7 +13,10 @@ class Pressable extends StatefulWidget {
   final VoidCallback? onTap;
   final double scale;
   final bool haptic;
-  const Pressable({super.key, required this.child, this.onTap, this.scale = 0.97, this.haptic = true});
+  /// A soft coloured glow that blooms behind the child while it is pressed.
+  final Color? glow;
+  final double glowRadius;
+  const Pressable({super.key, required this.child, this.onTap, this.scale = 0.97, this.haptic = true, this.glow, this.glowRadius = 18});
   @override
   State<Pressable> createState() => _PressableState();
 }
@@ -41,7 +44,17 @@ class _PressableState extends State<Pressable> {
           scale: down && !reduceMotion(context) ? widget.scale : 1,
           duration: kFast,
           curve: kCurve,
-          child: widget.child,
+          child: widget.glow == null
+              ? widget.child
+              : AnimatedContainer(
+                  duration: const Duration(milliseconds: 220),
+                  curve: kCurve,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(widget.glowRadius),
+                    boxShadow: down ? [BoxShadow(color: widget.glow!.withValues(alpha: 0.6), blurRadius: 30, spreadRadius: 3)] : const [],
+                  ),
+                  child: widget.child,
+                ),
         ),
       );
 }
@@ -212,4 +225,240 @@ class _AmbientGlowState extends State<AmbientGlow> with SingleTickerProviderStat
           );
         },
       );
+}
+
+
+// ---------------------------------------------------------------------------
+// Motion kit (added): pop on change, confetti, parallax, music bars
+// ---------------------------------------------------------------------------
+
+/// Pops (grows slightly, then settles) whenever [value] changes. Used on badges and status labels.
+class PopOnChange extends StatelessWidget {
+  final Object value;
+  final Widget child;
+  const PopOnChange({super.key, required this.value, required this.child});
+  @override
+  Widget build(BuildContext context) {
+    if (reduceMotion(context)) return child;
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 420),
+      transitionBuilder: (c, a) => ScaleTransition(scale: CurvedAnimation(parent: a, curve: Curves.elasticOut), child: FadeTransition(opacity: a, child: c)),
+      child: KeyedSubtree(key: ValueKey(value), child: child),
+    );
+  }
+}
+
+/// A short burst of coloured paper from the middle of the screen. Used for wins: sharing, approving, winning a lead.
+void showConfetti(BuildContext context) {
+  if (reduceMotion(context)) return;
+  final overlay = Overlay.maybeOf(context, rootOverlay: true);
+  if (overlay == null) return;
+  late OverlayEntry entry;
+  entry = OverlayEntry(builder: (_) => _ConfettiLayer(onDone: () => entry.remove()));
+  overlay.insert(entry);
+}
+
+class _ConfettiLayer extends StatefulWidget {
+  final VoidCallback onDone;
+  const _ConfettiLayer({required this.onDone});
+  @override
+  State<_ConfettiLayer> createState() => _ConfettiLayerState();
+}
+
+class _ConfettiLayerState extends State<_ConfettiLayer> with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(vsync: this, duration: const Duration(milliseconds: 1700))..forward().whenComplete(widget.onDone);
+  late final List<_Bit> _bits = _makeBits();
+
+  static List<_Bit> _makeBits() {
+    final r = math.Random();
+    const colors = [Color(0xFF9378FF), Color(0xFFFF4F9A), Color(0xFFFFB84D), Color(0xFF2DD4A0), Color(0xFF5AB0FF)];
+    return [
+      for (var i = 0; i < 34; i++)
+        _Bit(
+          angle: -math.pi / 2 + (r.nextDouble() - 0.5) * 2.2,
+          speed: 260 + r.nextDouble() * 360,
+          spin: (r.nextDouble() - 0.5) * 12,
+          size: 6 + r.nextDouble() * 6,
+          color: colors[i % colors.length],
+          round: i % 3 == 0,
+        ),
+    ];
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => IgnorePointer(child: CustomPaint(size: Size.infinite, painter: _ConfettiPainter(_c, _bits)));
+}
+
+class _Bit {
+  final double angle, speed, spin, size;
+  final Color color;
+  final bool round;
+  _Bit({required this.angle, required this.speed, required this.spin, required this.size, required this.color, required this.round});
+}
+
+class _ConfettiPainter extends CustomPainter {
+  final Animation<double> t;
+  final List<_Bit> bits;
+  _ConfettiPainter(this.t, this.bits) : super(repaint: t);
+  @override
+  void paint(Canvas canvas, Size size) {
+    final origin = Offset(size.width / 2, size.height * 0.52);
+    final time = t.value * 1.7; // seconds
+    for (final b in bits) {
+      final x = origin.dx + math.cos(b.angle) * b.speed * time * (1 - t.value * 0.35);
+      final y = origin.dy + math.sin(b.angle) * b.speed * time + 620 * time * time * 0.5;
+      final fade = t.value < 0.7 ? 1.0 : (1 - (t.value - 0.7) / 0.3);
+      final p = Paint()..color = b.color.withValues(alpha: fade.clamp(0.0, 1.0));
+      canvas.save();
+      canvas.translate(x, y);
+      canvas.rotate(b.spin * time);
+      if (b.round) {
+        canvas.drawCircle(Offset.zero, b.size / 2, p);
+      } else {
+        canvas.drawRRect(RRect.fromRectAndRadius(Rect.fromCenter(center: Offset.zero, width: b.size, height: b.size * 0.55), const Radius.circular(1.5)), p);
+      }
+      canvas.restore();
+    }
+  }
+
+  @override
+  bool shouldRepaint(_ConfettiPainter o) => false;
+}
+
+/// Moves its child a little slower than the page scrolls, so photos and videos drift as you scroll.
+class Parallax extends StatefulWidget {
+  final Widget child;
+  final double strength; // pixels of drift at the edges of the screen
+  const Parallax({super.key, required this.child, this.strength = 16});
+  @override
+  State<Parallax> createState() => _ParallaxState();
+}
+
+class _ParallaxState extends State<Parallax> {
+  final _dy = ValueNotifier<double>(0);
+  ScrollPosition? _pos;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _pos?.removeListener(_update);
+    _pos = Scrollable.maybeOf(context)?.position;
+    _pos?.addListener(_update);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _update());
+  }
+
+  void _update() {
+    if (!mounted) return;
+    final box = context.findRenderObject() as RenderBox?;
+    final scrollBox = Scrollable.maybeOf(context)?.context.findRenderObject() as RenderBox?;
+    if (box == null || scrollBox == null || !box.attached || !box.hasSize || !scrollBox.hasSize) return;
+    final y = box.localToGlobal(box.size.center(Offset.zero), ancestor: scrollBox).dy;
+    final h = scrollBox.size.height;
+    _dy.value = ((y - h / 2) / h).clamp(-1.0, 1.0) * widget.strength;
+  }
+
+  @override
+  void dispose() {
+    _pos?.removeListener(_update);
+    _dy.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (reduceMotion(context)) return widget.child;
+    return ClipRect(
+      child: ValueListenableBuilder<double>(
+        valueListenable: _dy,
+        child: RepaintBoundary(child: widget.child),
+        builder: (_, v, c) => Transform.translate(offset: Offset(0, v), child: Transform.scale(scale: 1.1, child: c)),
+      ),
+    );
+  }
+}
+
+/// Small bouncing bars, like a music player. Moves while [active], rests flat otherwise.
+class MusicBars extends StatefulWidget {
+  final bool active;
+  final Color color;
+  final double height;
+  const MusicBars({super.key, required this.active, this.color = Colors.white, this.height = 14});
+  @override
+  State<MusicBars> createState() => _MusicBarsState();
+}
+
+class _MusicBarsState extends State<MusicBars> with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(vsync: this, duration: const Duration(milliseconds: 900));
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.active) _c.repeat();
+  }
+
+  @override
+  void didUpdateWidget(MusicBars old) {
+    super.didUpdateWidget(old);
+    if (widget.active && !_c.isAnimating) _c.repeat();
+    if (!widget.active && _c.isAnimating) _c.stop();
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+        height: widget.height,
+        width: 22,
+        child: AnimatedBuilder(
+          animation: _c,
+          builder: (_, __) => Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, crossAxisAlignment: CrossAxisAlignment.end, children: [
+            for (var i = 0; i < 4; i++)
+              Container(
+                width: 3.2,
+                height: widget.active ? widget.height * (0.3 + 0.7 * (0.5 + 0.5 * math.sin(_c.value * math.pi * 2 + i * 1.7)).abs()) : widget.height * 0.3,
+                decoration: BoxDecoration(color: widget.color, borderRadius: BorderRadius.circular(2)),
+              ),
+          ]),
+        ),
+      );
+}
+
+/// A few soft dots that drift slowly in the background of a screen.
+class FloatingDots extends StatelessWidget {
+  final int count;
+  const FloatingDots({super.key, this.count = 9});
+  @override
+  Widget build(BuildContext context) {
+    if (reduceMotion(context)) return const SizedBox.shrink();
+    final r = math.Random(7);
+    return IgnorePointer(
+      child: LayoutBuilder(
+        builder: (context, box) => Stack(children: [
+          for (var i = 0; i < count; i++)
+            Positioned(
+              left: r.nextDouble() * box.maxWidth,
+              top: r.nextDouble() * box.maxHeight,
+              child: Container(
+                width: 4 + r.nextDouble() * 6,
+                height: 4 + r.nextDouble() * 6,
+                decoration: BoxDecoration(shape: BoxShape.circle, color: C.primary.withValues(alpha: 0.10 + r.nextDouble() * 0.14)),
+              )
+                  .animate(onPlay: (c) => c.repeat(reverse: true), delay: (r.nextInt(2400)).ms)
+                  .moveY(begin: -10, end: 14, duration: (3200 + r.nextInt(2600)).ms, curve: Curves.easeInOut)
+                  .fade(begin: 0.35, end: 1, duration: 2400.ms),
+            ),
+        ]),
+      ),
+    );
+  }
 }

@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'package:animations/animations.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter/services.dart';
 import './icons.dart';
 import 'liquid_bar.dart';
@@ -28,6 +30,19 @@ import 'screens/help.dart';
 import 'screens/inbox.dart';
 import 'screens/media.dart';
 import 'screens/media_widgets.dart';
+import 'screens/gallery.dart';
+import 'screens/bundles.dart';
+import 'screens/calendar.dart';
+import 'screens/templates.dart';
+import 'screens/verification.dart';
+import 'screens/review_requests.dart';
+import 'screens/referrals.dart';
+import 'screens/video_settings.dart';
+import 'screens/embeds.dart';
+import 'screens/support_chat.dart';
+import 'screens/security.dart';
+import 'screens/marketing_email.dart';
+import 'screens/workspaces.dart';
 import 'repo.dart';
 
 class Section {
@@ -56,6 +71,14 @@ class Shell extends StatefulWidget {
 class ShellState extends State<Shell> {
   late int index = widget.initialIndex;
   int unread = 0; // new conversations, shown on the message icon
+  bool _exitArmed = false; // after one Back press on Home, a second one within 2 seconds leaves the app
+  Timer? _exitTimer;
+
+  @override
+  void dispose() {
+    _exitTimer?.cancel();
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -84,13 +107,31 @@ class ShellState extends State<Shell> {
     Section('Additional services', 'Rewards, ads, referrals', PIconsRegular.stack, PIconsFill.stack, const Color(0xFFEC4899), (s) => const AdditionalServicesScreen()),
     Section('More', 'Everything else', PIconsRegular.dotsNine, PIconsFill.dotsNine, C.primary, (s) => _MoreGrid(shell: s)),
     Section('Media', 'Stories and reels', PIconsRegular.playCircle, PIconsFill.playCircle, const Color(0xFFFF4F9A), (s) => const MediaScreen()),
+    Section('Gallery', 'Your videos, pictures and documents', Icons.photo_library_outlined, Icons.photo_library_rounded, const Color(0xFF2F8FE0), (s) => const GalleryScreen()),
+    Section('Contact bundles', 'Email a group of customers', Icons.groups_outlined, Icons.groups_rounded, const Color(0xFF7C5CFF), (s) => const BundlesScreen()),
+    Section('Calendar', 'What is going out and when', Icons.calendar_month_outlined, Icons.calendar_month_rounded, const Color(0xFF14B8A6), (s) => const CalendarScreen()),
+    Section('Review templates', 'Questions customers answer', Icons.quiz_outlined, Icons.quiz_rounded, const Color(0xFFE08A00), (s) => const TemplatesScreen()),
+    Section('Verification', 'Get your blue tick', Icons.verified_outlined, Icons.verified_rounded, const Color(0xFF2F8FE0), (s) => const VerificationScreen()),
+    Section('Review requests', 'People asking to review you', Icons.how_to_reg_outlined, Icons.how_to_reg_rounded, const Color(0xFFFF6B8B), (s) => const ReviewRequestsScreen()),
+    Section('Referrals', 'Earn credit for new businesses', Icons.card_giftcard_outlined, Icons.card_giftcard_rounded, const Color(0xFFEC4899), (s) => const ReferralHubScreen()),
+    Section('Video settings', 'Subtitles and watermark', Icons.closed_caption_outlined, Icons.closed_caption_rounded, const Color(0xFF8E8EA8), (s) => const VideoSettingsScreen()),
+    Section('Embeds', 'Show reviews on your website', Icons.code_outlined, Icons.code_rounded, const Color(0xFF0FB58A), (s) => const EmbedsScreen()),
+    Section('Support', 'Chat with the ViewRec team', Icons.support_agent_outlined, Icons.support_agent_rounded, const Color(0xFFB265FF), (s) => const SupportChatScreen()),
+    Section('Security', 'Two-step sign-in and devices', Icons.shield_outlined, Icons.shield_rounded, const Color(0xFFEF4444), (s) => const SecurityScreen()),
+    Section('Marketing email', 'Write to your customers', Icons.campaign_outlined, Icons.campaign_rounded, const Color(0xFFFF9F43), (s) => const MarketingEmailScreen()),
+    Section('Workspaces', 'Switch between businesses', Icons.swap_horizontal_circle_outlined, Icons.swap_horizontal_circle_rounded, const Color(0xFF3B82F6), (s) => const WorkspacesScreen()),
   ];
 
   void goTo(int i) {
     if (i == index) return;
     HapticFeedback.selectionClick();
-    setState(() => index = i);
+    setState(() {
+      index = i;
+      scrolled = false;
+    });
   }
+
+  bool scrolled = false;
 
   Future<void> push(Widget w) => Navigator.of(context).push(MaterialPageRoute(builder: (_) => w));
 
@@ -105,21 +146,62 @@ class ShellState extends State<Shell> {
   @override
   Widget build(BuildContext context) {
     final sec = sections[index];
-    return Scaffold(
+    final typing = MediaQuery.of(context).viewInsets.bottom > 0; // the keyboard is up: the tab bar steps aside
+    return PopScope(
+      // The phone's Back button walks back through the app instead of closing it:
+      // a section opened from More goes back to More, a tab goes back to Home, and Home asks twice before leaving.
+      canPop: index == 0 && _exitArmed,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        if (index != 0) {
+          goTo(tabs.contains(index) || index == kMoreIndex ? 0 : kMoreIndex);
+          return;
+        }
+        setState(() => _exitArmed = true);
+        showMsg(context, 'Press Back again to leave the app');
+        _exitTimer?.cancel();
+        _exitTimer = Timer(const Duration(seconds: 2), () {
+          if (mounted) setState(() => _exitArmed = false);
+        });
+      },
+      child: Scaffold(
       body: Stack(children: [
         Column(children: [
-          SafeArea(bottom: false, child: _header(sec)),
+          // The header takes the status-bar space once; pages below must not add it again.
+          AnimatedContainer(
+            duration: kMed,
+            curve: kCurve,
+            decoration: BoxDecoration(
+              color: scrolled ? C.bg.withValues(alpha: 0.94) : Colors.transparent,
+              border: Border(bottom: BorderSide(color: scrolled ? C.border : Colors.transparent)),
+              boxShadow: scrolled && !C.dark ? const [BoxShadow(color: Color(0x0F1B1550), blurRadius: 16, offset: Offset(0, 6))] : null,
+            ),
+            child: SafeArea(bottom: false, child: _header(sec)),
+          ),
           Expanded(
-            child: PageTransitionSwitcher(
-              duration: reduceMotion(context) ? Duration.zero : const Duration(milliseconds: 420),
-              transitionBuilder: (child, anim, secAnim) => FadeThroughTransition(animation: anim, secondaryAnimation: secAnim, fillColor: Colors.transparent, child: child),
-              child: KeyedSubtree(key: ValueKey(index), child: sec.build(this)),
+            child: NotificationListener<ScrollUpdateNotification>(
+              onNotification: (n) {
+                if (n.depth == 0 && n.metrics.axis == Axis.vertical) {
+                  final s = n.metrics.pixels > 8;
+                  if (s != scrolled) setState(() => scrolled = s);
+                }
+                return false;
+              },
+              child: MediaQuery.removePadding(
+                context: context,
+                removeTop: true,
+                child: PageTransitionSwitcher(
+                  duration: reduceMotion(context) ? Duration.zero : const Duration(milliseconds: 420),
+                  transitionBuilder: (child, anim, secAnim) => FadeThroughTransition(animation: anim, secondaryAnimation: secAnim, fillColor: Colors.transparent, child: child),
+                  child: KeyedSubtree(key: ValueKey(index), child: sec.build(this)),
+                ),
+              ),
             ),
           ),
         ]),
-        _bar(context),
+        if (!typing) _bar(context),
       ]),
-    );
+    ));
   }
 
   // ---------- header ----------
@@ -139,7 +221,11 @@ class ShellState extends State<Shell> {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                 decoration: BoxDecoration(color: C.rec, borderRadius: BorderRadius.circular(999), border: Border.all(color: C.bg, width: 2)),
-                child: Text('$badge', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: Colors.white)),
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 380),
+                  transitionBuilder: (c, a) => ScaleTransition(scale: CurvedAnimation(parent: a, curve: Curves.elasticOut), child: FadeTransition(opacity: a, child: c)),
+                  child: Text('$badge', key: ValueKey(badge), style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: Colors.white)),
+                ),
               ),
             ),
         ]),
@@ -166,18 +252,27 @@ class ShellState extends State<Shell> {
             AnimatedSwitcher(
               duration: kMed,
               transitionBuilder: (c, a) => FadeTransition(opacity: a, child: SlideTransition(position: Tween(begin: const Offset(0, 0.25), end: Offset.zero).animate(a), child: c)),
-              child: Text(
-                overview ? 'Hartley Roofing' : sec.title,
+              child: FittedBox(
                 key: ValueKey(sec.title),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 27, fontWeight: FontWeight.w800, letterSpacing: -0.8, height: 1.15),
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  overview ? 'Hartley Roofing' : sec.title,
+                  maxLines: 1,
+                  style: const TextStyle(fontSize: 27, fontWeight: FontWeight.w800, letterSpacing: -0.8, height: 1.15),
+                ),
               ),
             ),
           ]),
         ),
         const SizedBox(width: 10),
-        _round(Icon(PIconsRegular.bell, size: 19, color: C.text), () => push(const NotificationsScreen()), badge: 3),
+        _round(
+          reduceMotion(context)
+              ? Icon(PIconsRegular.bell, size: 19, color: C.text)
+              : Icon(PIconsRegular.bell, size: 19, color: C.text).animate(key: const ValueKey('bell'), delay: 1400.ms).shake(hz: 4, rotation: 0.28, duration: 700.ms, curve: Curves.easeOut),
+          () => push(const NotificationsScreen()),
+          badge: 3,
+        ),
         const SizedBox(width: 10),
         _round(Icon(Icons.chat_bubble_outline_rounded, size: 19, color: C.text), () => push(const InboxScreen()).then((_) => repo.leads().then((l) {
               if (mounted) setState(() => unread = l.where((x) => x.status == 'new').length);
@@ -317,9 +412,10 @@ class _MoreGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     // (section index) groups
     const groups = <(String, List<int>)>[
-      ('Grow', [2, 6, 7, 8]),
-      ('Customers', [3, 4, 5]),
-      ('Account', [9, 10, 12, 11]),
+      ('Grow', [2, 6, 7, 8, 23, 21]),
+      ('Customers', [3, 4, 5, 16, 17, 26, 20]),
+      ('Content', [15, 18, 22, 19]),
+      ('Account', [9, 10, 12, 11, 25, 27, 24]),
     ];
     var n = 0;
     return AppPage(reveal: false, children: [
@@ -357,7 +453,7 @@ class _MoreGrid extends StatelessWidget {
           physics: const NeverScrollableScrollPhysics(),
           mainAxisSpacing: 12,
           crossAxisSpacing: 12,
-          childAspectRatio: MediaQuery.textScalerOf(context).scale(1) > 1.15 ? 0.9 : 1.18,
+          childAspectRatio: MediaQuery.textScalerOf(context).scale(1) > 1.15 ? 0.9 : 1.02,
           children: [
             for (final i in g.$2)
               _tile(context, shell.sections[i], () => shell.goTo(i)).reveal(context, n++, 0.1),
@@ -402,7 +498,7 @@ class _MoreGrid extends StatelessWidget {
             const Spacer(),
             Text(s.title, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14.5, height: 1.2)),
             const SizedBox(height: 3),
-            Text(s.blurb, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 11.5, color: C.muted, fontWeight: FontWeight.w500)),
+            Text(s.blurb, maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 11.5, color: C.muted, fontWeight: FontWeight.w500)),
           ]),
         ),
       );
