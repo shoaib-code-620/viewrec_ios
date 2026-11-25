@@ -3,7 +3,6 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:viewrec/media_data.dart';
 import 'package:viewrec/screens/caption_studio.dart';
 import 'package:viewrec/screens/media_profile.dart';
 import 'package:viewrec/screens/pricing.dart';

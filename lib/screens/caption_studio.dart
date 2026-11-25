@@ -19,8 +19,9 @@ enum CaptionPos { top, middle, bottom }
 
 class _Logo {
   final String path;
-  double x, y, size; // centre as a fraction of the picture, width as a fraction of the picture width
-  _Logo(this.path, {this.x = 0.85, this.y = 0.08, this.size = 0.2});
+  double x, y; // centre as a fraction of the picture
+  double size = 0.2; // width as a fraction of the picture width
+  _Logo(this.path, {this.x = 0.85, this.y = 0.08});
 }
 
 const _captionColors = [Color(0xFFFFFFFF), Color(0xFFFFD65A), Color(0xFF3DE0BC), Color(0xFF0B1B3A)];
