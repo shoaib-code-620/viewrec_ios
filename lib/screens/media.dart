@@ -151,7 +151,7 @@ class _MediaBodyState extends State<_MediaBody> {
               const SizedBox(width: 12),
               Expanded(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(r.business, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14.5)),
+                  Text(r.business, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
                   Muted(r.category, size: 12, maxLines: 1),
                 ]),
               ),
@@ -197,10 +197,10 @@ class _ReelCardState extends State<_ReelCard> {
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Row(children: [
-                  Flexible(child: GestureDetector(onTap: () => openProfile(context, r.businessId), child: Text(r.business, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14.5)))),
+                  Flexible(child: GestureDetector(onTap: () => openProfile(context, r.businessId), child: Text(r.business, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)))),
                   if (r.verified) Padding(padding: const EdgeInsets.only(left: 4), child: Icon(Icons.verified_rounded, size: 15, color: C.blue)),
                 ]),
-                Text(r.category, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 11.5, color: C.muted, fontWeight: FontWeight.w500)),
+                Text(r.category, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: C.muted, fontWeight: FontWeight.w500)),
               ]),
             ),
             const SizedBox(width: 8),
@@ -237,11 +237,11 @@ class _ReelCardState extends State<_ReelCard> {
                   top: 12,
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                    decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.35), borderRadius: BorderRadius.circular(10)),
+                    decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.35), borderRadius: BorderRadius.circular(12)),
                     child: Row(mainAxisSize: MainAxisSize.min, children: [
                       Icon(r.kind == 'post' ? Icons.grid_on_rounded : Icons.movie_creation_rounded, size: 13, color: Colors.white),
                       const SizedBox(width: 5),
-                      Text(r.kind == 'post' ? (r.isVideo ? 'Post · ${r.duration}' : 'Post') : 'Reel · ${r.duration}', style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: Colors.white)),
+                      Text(r.kind == 'post' ? (r.isVideo ? 'Post · ${r.duration}' : 'Post') : 'Reel · ${r.duration}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white)),
                     ]),
                   ),
                 ),
@@ -250,11 +250,11 @@ class _ReelCardState extends State<_ReelCard> {
                   top: 12,
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-                    decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.35), borderRadius: BorderRadius.circular(10)),
+                    decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.35), borderRadius: BorderRadius.circular(12)),
                     child: Row(mainAxisSize: MainAxisSize.min, children: [
                       const Icon(Icons.visibility_rounded, size: 13, color: Colors.white),
                       const SizedBox(width: 4),
-                      Text(compact(r.views), style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: Colors.white)),
+                      Text(compact(r.views), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white)),
                     ]),
                   ),
                 ),
@@ -268,7 +268,7 @@ class _ReelCardState extends State<_ReelCard> {
                       for (var k = 0; k < 5; k++) Icon(k < r.rating ? Icons.star_rounded : Icons.star_outline_rounded, size: 15, color: const Color(0xFFFFC21A)),
                       const SizedBox(width: 8),
                     ],
-                    Expanded(child: Text(r.reviewer, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: Colors.white))),
+                    Expanded(child: Text(r.reviewer, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Colors.white))),
                     if (r.isVideo) const Icon(Icons.volume_off_rounded, size: 18, color: Colors.white70),
                   ]),
                 ),
@@ -304,7 +304,7 @@ class _ReelCardState extends State<_ReelCard> {
               duration: const Duration(milliseconds: 260),
               transitionBuilder: (c, a) => FadeTransition(opacity: a, child: SlideTransition(position: Tween(begin: const Offset(0, 0.4), end: Offset.zero).animate(a), child: c)),
               layoutBuilder: (current, previous) => Stack(alignment: Alignment.centerLeft, children: [...previous, if (current != null) current]),
-              child: Text('${compact(r.likes)} likes', key: ValueKey(r.likes), style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13.5)),
+              child: Text('${compact(r.likes)} likes', key: ValueKey(r.likes), style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14)),
             ),
             const SizedBox(height: 4),
             Text.rich(
@@ -314,12 +314,12 @@ class _ReelCardState extends State<_ReelCard> {
               ]),
               maxLines: 3,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 13.5, height: 1.4),
+              style: const TextStyle(fontSize: 14, height: 1.4),
             ),
             const SizedBox(height: 6),
             GestureDetector(
               onTap: () => showCommentsSheet(context, r, widget.onChanged),
-              child: Text(r.comments == 0 ? 'Add a comment' : 'View all ${r.comments} comments', style: TextStyle(fontSize: 12.5, color: C.muted, fontWeight: FontWeight.w600)),
+              child: Text(r.comments == 0 ? 'Add a comment' : 'View all ${r.comments} comments', style: TextStyle(fontSize: 13, color: C.muted, fontWeight: FontWeight.w600)),
             ),
           ]),
         ),

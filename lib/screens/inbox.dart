@@ -79,13 +79,7 @@ class _InboxBodyState extends State<_InboxBody> {
     final next = _swipeStatus(l, toRight);
     _setStatus(l, next);
     if (!toRight) {
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(SnackBar(
-          content: Text('${l.name} closed'),
-          action: SnackBarAction(label: 'Undo', textColor: const Color(0xFF8CC3FF), onPressed: () => _setStatus(l, prev)),
-          behavior: SnackBarBehavior.floating,
-        ));
+      showUndo(context, '${l.name} closed', () => _setStatus(l, prev));
     }
   }
 
@@ -138,7 +132,7 @@ class _InboxBodyState extends State<_InboxBody> {
           Container(
             width: 44,
             height: 44,
-            decoration: BoxDecoration(borderRadius: BorderRadius.circular(15), color: unread > 0 ? C.rec.withValues(alpha: 0.14) : C.green.withValues(alpha: 0.14)),
+            decoration: BoxDecoration(borderRadius: BorderRadius.circular(16), color: unread > 0 ? C.rec.withValues(alpha: 0.14) : C.green.withValues(alpha: 0.14)),
             child: Icon(unread > 0 ? Icons.mark_email_unread_rounded : Icons.mark_email_read_rounded, color: unread > 0 ? C.rec : C.green, size: 22),
           ),
           const SizedBox(width: 14),
@@ -161,7 +155,7 @@ class _InboxBodyState extends State<_InboxBody> {
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           Icon(icon, color: color, size: 24),
           const SizedBox(height: 3),
-          Text(label, style: TextStyle(color: color, fontWeight: FontWeight.w800, fontSize: 11.5)),
+          Text(label, style: TextStyle(color: color, fontWeight: FontWeight.w800, fontSize: 12)),
         ]),
       );
 
@@ -210,20 +204,20 @@ class _InboxBodyState extends State<_InboxBody> {
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Row(children: [
                   Expanded(child: Text(l.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontWeight: unread ? FontWeight.w800 : FontWeight.w700, fontSize: 15))),
-                  Text(l.when, style: TextStyle(fontSize: 11.5, color: unread ? C.primary : C.muted, fontWeight: FontWeight.w700)),
+                  Text(l.when, style: TextStyle(fontSize: 12, color: unread ? C.primary : C.muted, fontWeight: FontWeight.w700)),
                 ]),
                 const SizedBox(height: 3),
                 Row(children: [
                   if (isAttachment) ...[Icon(voice ? Icons.mic_rounded : Icons.attach_file_rounded, size: 14, color: C.muted), const SizedBox(width: 4)],
                   Expanded(
-                    child: Text(note, maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 13.5, height: 1.35, color: unread ? C.text : C.muted, fontWeight: unread ? FontWeight.w600 : FontWeight.w500)),
+                    child: Text(note, maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 14, height: 1.35, color: unread ? C.text : C.muted, fontWeight: unread ? FontWeight.w600 : FontWeight.w500)),
                   ),
                 ]),
                 const SizedBox(height: 7),
                 Row(children: [
                   Icon(Icons.north_east_rounded, size: 12, color: C.primary),
                   const SizedBox(width: 4),
-                  Flexible(child: Text('${l.service} · ${l.source}', maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 11.5, color: C.primary, fontWeight: FontWeight.w700))),
+                  Flexible(child: Text('${l.service} · ${l.source}', maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: C.primary, fontWeight: FontWeight.w700))),
                   const SizedBox(width: 8),
                   StatusBadge(l.status),
                 ]),

@@ -75,7 +75,7 @@ class _GalleryBodyState extends State<_GalleryBody> {
             child: Column(children: [
               GlossIcon(icon, c, size: 58),
               const SizedBox(height: 8),
-              Text(label, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700)),
+              Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
             ]),
           ),
         );
@@ -128,7 +128,7 @@ class _GalleryBodyState extends State<_GalleryBody> {
         const SizedBox(height: 4),
         Muted('${fmtBytes(it.bytes)} · ${it.when}', size: 13),
         const SizedBox(height: 14),
-        Text('Move to', style: TextStyle(color: C.muted, fontWeight: FontWeight.w700, fontSize: 12.5)),
+        Text('Move to', style: TextStyle(color: C.muted, fontWeight: FontWeight.w700, fontSize: 13)),
         const SizedBox(height: 8),
         Wrap(runSpacing: 8, children: [
           AppChip('No folder', active: it.folderId == null, onTap: () => _move(it, null)),
@@ -153,8 +153,26 @@ class _GalleryBodyState extends State<_GalleryBody> {
 
   Future<void> _move(GalleryItem it, String? id) async {
     Navigator.pop(context);
+    await _moveTo(it, id);
+  }
+
+  /// Moves a file into a folder (or out of all folders). Used by the sheet and by dragging a file onto a folder.
+  Future<void> _moveTo(GalleryItem it, String? id) async {
+    final before = it.folderId;
+    if (before == id) return;
     setState(() => it.folderId = id);
-    await webRepo.moveGalleryItem(it.id, id);
+    try {
+      await webRepo.moveGalleryItem(it.id, id);
+      if (mounted) {
+        final name = id == null ? 'No folder' : folders.firstWhere((f) => f.id == id).name;
+        showMsg(context, 'Moved to $name');
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() => it.folderId = before);
+        showMsg(context, "Couldn't move that file. Try again.");
+      }
+    }
   }
 
   Widget _thumb(GalleryItem it) {
@@ -174,7 +192,7 @@ class _GalleryBodyState extends State<_GalleryBody> {
           child: Container(
             padding: const EdgeInsets.fromLTRB(8, 14, 8, 6),
             decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.transparent, Colors.black.withValues(alpha: 0.65)])),
-            child: Text(it.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontSize: 10.5, fontWeight: FontWeight.w700)),
+            child: Text(it.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700)),
           ),
         ),
       ]),
@@ -206,9 +224,18 @@ class _GalleryBodyState extends State<_GalleryBody> {
         height: 40,
         child: ListView(scrollDirection: Axis.horizontal, children: [
           AppChip('All', active: folder == null, onTap: () => setState(() => folder = null)),
-          for (final f in folders) AppChip(f.name, active: folder == f.id, onTap: () => setState(() => folder = f.id)),
+          for (final f in folders)
+            DragTarget<GalleryItem>(
+              onWillAcceptWithDetails: (d) => d.data.folderId != f.id,
+              onAcceptWithDetails: (d) => _moveTo(d.data, f.id),
+              builder: (context, over, _) => Container(
+                foregroundDecoration: over.isNotEmpty ? BoxDecoration(borderRadius: BorderRadius.circular(999), border: Border.all(color: C.primary, width: 2.5)) : null,
+                child: AppChip(f.name, active: folder == f.id, onTap: () => setState(() => folder = f.id)),
+              ),
+            ),
         ]),
       ),
+      if (folders.isNotEmpty && shown.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 6), child: Muted('Press and hold a file, then drop it on a folder to move it.', size: 12)),
       const SizedBox(height: 10),
       if (shown.isEmpty)
         const EmptyState(Icons.photo_library_rounded, 'Nothing here yet', 'Add videos, pictures and documents to use in your posts.')
@@ -219,7 +246,17 @@ class _GalleryBodyState extends State<_GalleryBody> {
           physics: const NeverScrollableScrollPhysics(),
           mainAxisSpacing: 8,
           crossAxisSpacing: 8,
-          children: [for (var i = 0; i < shown.length; i++) Pressable(onTap: () => _open(shown[i]), scale: 0.95, child: _thumb(shown[i])).reveal(context, 2 + i, 0.06)],
+          children: [
+            for (var i = 0; i < shown.length; i++)
+              LongPressDraggable<GalleryItem>(
+                data: shown[i],
+                delay: const Duration(milliseconds: 260),
+                hapticFeedbackOnStart: true,
+                feedback: Material(color: Colors.transparent, child: SizedBox(width: 96, height: 96, child: Transform.scale(scale: 1.06, child: _thumb(shown[i])))),
+                childWhenDragging: Opacity(opacity: 0.3, child: _thumb(shown[i])),
+                child: Pressable(onTap: () => _open(shown[i]), scale: 0.95, child: _thumb(shown[i])),
+              ).reveal(context, 2 + i, 0.06),
+          ],
         ),
     ]);
   }

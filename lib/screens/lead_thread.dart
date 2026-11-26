@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:math' as math;
+import 'package:emoji_picker_flutter/emoji_picker_flutter.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
@@ -24,6 +25,8 @@ abstract class ConversationSource {
   Future<ThreadMessage> sendAttachment({required String kind, required String path, required String name, int size = 0, int durationMs = 0, void Function(double)? onProgress});
   Future<ThreadMessage> edit(String messageId, String text);
   Future<void> delete(String messageId);
+  /// React with an emoji, or null to take the reaction back.
+  Future<void> react(String messageId, String? emoji) async {}
   Future<ThreadMessage> logCall() => throw UnsupportedError('Calls are not available in this conversation');
 }
 
@@ -42,6 +45,8 @@ class LeadConversation extends ConversationSource {
   Future<ThreadMessage> edit(String messageId, String text) => repo.editLeadMessage(lead.id, messageId, text);
   @override
   Future<void> delete(String messageId) => repo.deleteLeadMessage(lead.id, messageId);
+  @override
+  Future<void> react(String messageId, String? emoji) => repo.reactLeadMessage(lead.id, messageId, emoji);
   @override
   Future<ThreadMessage> logCall() => repo.logLeadCall(lead.id);
 }
@@ -115,6 +120,8 @@ class ConversationBody extends StatefulWidget {
 
 class _ConversationBodyState extends State<ConversationBody> with WidgetsBindingObserver {
   bool keyboard = false;
+  bool emojiOpen = false;
+  final focus = FocusNode();
 
   late final List<ThreadMessage> msgs = List.of(widget.initial);
   final input = TextEditingController();
@@ -143,6 +150,9 @@ class _ConversationBodyState extends State<ConversationBody> with WidgetsBinding
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    focus.addListener(() {
+      if (focus.hasFocus && emojiOpen) setState(() => emojiOpen = false);
+    });
     input.addListener(() {
       final has = input.text.trim().isNotEmpty;
       if (has != hasText) setState(() => hasText = has);
@@ -168,8 +178,19 @@ class _ConversationBodyState extends State<ConversationBody> with WidgetsBinding
     }
   }
 
+  void _toggleEmoji() {
+    if (emojiOpen) {
+      setState(() => emojiOpen = false);
+      focus.requestFocus();
+    } else {
+      focus.unfocus();
+      setState(() => emojiOpen = true);
+    }
+  }
+
   @override
   void dispose() {
+    focus.dispose();
     WidgetsBinding.instance.removeObserver(this);
     _poll?.cancel();
     _recTimer?.cancel();
@@ -315,6 +336,46 @@ class _ConversationBodyState extends State<ConversationBody> with WidgetsBinding
   }
 
   /// Long-press a message: copy, edit (your own text) or delete (your own).
+  static const _quickReactions = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
+
+  /// Set or take back your reaction. The change shows at once and is undone if it could not be saved.
+  Future<void> _react(ThreadMessage m, String? emoji) async {
+    final before = m.myReaction;
+    HapticFeedback.selectionClick();
+    setState(() => m.myReaction = emoji);
+    try {
+      await widget.source.react(m.id, emoji);
+    } catch (_) {
+      if (mounted) {
+        setState(() => m.myReaction = before);
+        showMsg(context, "Couldn't save your reaction. Try again.");
+      }
+    }
+  }
+
+  /// Any emoji, from the full picker.
+  void _pickReaction(ThreadMessage m) {
+    showSheet(
+      context,
+      SizedBox(
+        height: 320,
+        child: EmojiPicker(
+          onEmojiSelected: (_, emoji) {
+            Navigator.pop(context);
+            _react(m, emoji.emoji);
+          },
+          config: Config(
+            height: 320,
+            emojiViewConfig: EmojiViewConfig(backgroundColor: C.surface, emojiSizeMax: 28),
+            categoryViewConfig: CategoryViewConfig(backgroundColor: C.surface, indicatorColor: C.primary, iconColor: C.muted, iconColorSelected: C.primary, backspaceColor: C.primary),
+            bottomActionBarConfig: const BottomActionBarConfig(enabled: false),
+            searchViewConfig: SearchViewConfig(backgroundColor: C.surface, buttonIconColor: C.primary),
+          ),
+        ),
+      ),
+    );
+  }
+
   void _actions(ThreadMessage m) {
     if (m.kind == 'call') return;
     HapticFeedback.mediumImpact();
@@ -330,13 +391,37 @@ class _ConversationBodyState extends State<ConversationBody> with WidgetsBinding
             child: Row(children: [
               Icon(icon, size: 22, color: color ?? C.text),
               const SizedBox(width: 16),
-              Text(label, style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15.5, color: color ?? C.text)),
+              Text(label, style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16, color: color ?? C.text)),
             ]),
           ),
         );
     showSheet(
       context,
       Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+          for (final e in _quickReactions)
+            Pressable(
+              onTap: () {
+                Navigator.pop(context);
+                _react(m, m.myReaction == e ? null : e);
+              },
+              child: Container(
+                width: 46,
+                height: 46,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(shape: BoxShape.circle, color: m.myReaction == e ? C.primary.withValues(alpha: 0.16) : C.surface2),
+                child: Text(e, style: const TextStyle(fontSize: 24)),
+              ),
+            ),
+          Pressable(
+            onTap: () {
+              Navigator.pop(context);
+              _pickReaction(m);
+            },
+            child: Container(width: 46, height: 46, decoration: BoxDecoration(shape: BoxShape.circle, color: C.surface2), child: Icon(Icons.add_rounded, color: C.muted)),
+          ),
+        ]),
+        const SizedBox(height: 8),
         if (m.kind == 'text')
           item(Icons.copy_rounded, 'Copy', () async {
             await Clipboard.setData(ClipboardData(text: m.text));
@@ -375,7 +460,7 @@ class _ConversationBodyState extends State<ConversationBody> with WidgetsBinding
             child: Column(children: [
               GlossIcon(icon, color, size: 58),
               const SizedBox(height: 8),
-              Text(label, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700)),
+              Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
             ]),
           ),
         );
@@ -563,21 +648,24 @@ class _ConversationBodyState extends State<ConversationBody> with WidgetsBinding
           const SizedBox(width: 10),
           Flexible(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(m.fileName, maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5, color: fg)),
-              if (m.sizeBytes > 0) Text(_size(m.sizeBytes), style: TextStyle(fontSize: 11.5, color: sub)),
+              Text(m.fileName, maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: fg)),
+              if (m.sizeBytes > 0) Text(_size(m.sizeBytes), style: TextStyle(fontSize: 12, color: sub)),
             ]),
           ),
         ]);
       default:
-        content = Text(m.text, style: TextStyle(height: 1.4, fontSize: 14.5, color: fg));
+        content = Text(m.text, style: TextStyle(height: 1.4, fontSize: 15, color: fg));
     }
+    final reacted = m.myReaction != null || m.theirReaction != null;
     return Align(
       alignment: mine ? Alignment.centerRight : Alignment.centerLeft,
-      child: GestureDetector(
+      child: Column(crossAxisAlignment: mine ? CrossAxisAlignment.end : CrossAxisAlignment.start, children: [
+      GestureDetector(
         onLongPress: () => _actions(m),
+        onDoubleTap: m.kind == 'call' ? null : () => _react(m, m.myReaction == '❤️' ? null : '❤️'),
         child: Container(
         constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.78),
-        margin: const EdgeInsets.only(bottom: 10),
+        margin: EdgeInsets.only(bottom: reacted ? 0 : 10),
         padding: EdgeInsets.symmetric(horizontal: m.kind == 'image' ? 6 : 14, vertical: m.kind == 'image' ? 6 : 10),
         decoration: BoxDecoration(
           gradient: mine ? const LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: C.gradBlue) : null,
@@ -592,14 +680,35 @@ class _ConversationBodyState extends State<ConversationBody> with WidgetsBinding
           Padding(
             padding: EdgeInsets.symmetric(horizontal: m.kind == 'image' ? 6 : 0),
             child: Row(mainAxisSize: MainAxisSize.min, children: [
-              if (m.edited) Text('edited  ', style: TextStyle(fontSize: 10.5, fontStyle: FontStyle.italic, color: sub)),
-              Text(m.status == 'failed' ? 'Not sent' : m.when, style: TextStyle(fontSize: 10.5, color: m.status == 'failed' ? const Color(0xFFFF9D92) : sub)),
+              if (m.edited) Text('edited  ', style: TextStyle(fontSize: 11, fontStyle: FontStyle.italic, color: sub)),
+              Text(m.status == 'failed' ? 'Not sent' : m.when, style: TextStyle(fontSize: 11, color: m.status == 'failed' ? const Color(0xFFFF9D92) : sub)),
               if (mine) ...[const SizedBox(width: 5), AnimatedSwitcher(duration: const Duration(milliseconds: 260), child: KeyedSubtree(key: ValueKey(m.status), child: _ticks(m)))],
             ]),
           ),
         ]),
       ),
       ),
+      if (reacted)
+        Transform.translate(
+          offset: const Offset(0, -10),
+          child: Padding(
+            padding: const EdgeInsets.only(bottom: 4, left: 10, right: 10),
+            child: Pressable(
+              onTap: m.myReaction == null ? () => _actions(m) : () => _react(m, null),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: C.surface,
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(color: m.myReaction != null ? C.primary.withValues(alpha: 0.5) : C.border),
+                  boxShadow: C.shadow,
+                ),
+                child: Text([if (m.theirReaction != null) m.theirReaction!, if (m.myReaction != null) m.myReaction!].join(' '), style: const TextStyle(fontSize: 15)),
+              ),
+            ),
+          ),
+        ),
+      ]),
     ).animate(key: ValueKey('b-${m.id}')).fadeIn(duration: 260.ms).slideY(begin: 0.15, end: 0, duration: 300.ms, curve: Curves.easeOut);
   }
 
@@ -710,7 +819,7 @@ class _ConversationBodyState extends State<ConversationBody> with WidgetsBinding
                       Padding(
                         padding: const EdgeInsets.only(right: 8),
                         child: ActionChip(
-                          label: Text(q, style: const TextStyle(fontSize: 12.5)),
+                          label: Text(q, style: const TextStyle(fontSize: 13)),
                           backgroundColor: C.surface,
                           side: BorderSide(color: C.border),
                           onPressed: editing != null ? null : () => _send(q),
@@ -737,7 +846,7 @@ class _ConversationBodyState extends State<ConversationBody> with WidgetsBinding
                 ),
         ),
         Container(
-          padding: EdgeInsets.fromLTRB(10, 8, 12, widget.avoidTabBar && !keyboard ? 112 : 12),
+          padding: EdgeInsets.fromLTRB(10, 8, 12, widget.avoidTabBar && !keyboard && !emojiOpen ? 112 : 12),
           decoration: BoxDecoration(color: C.surface, border: Border(top: BorderSide(color: C.border))),
           child: Row(children: [
             if (recording)
@@ -753,9 +862,15 @@ class _ConversationBodyState extends State<ConversationBody> with WidgetsBinding
                     : TextField(
                         key: const ValueKey('field'),
                         controller: input,
+                        focusNode: focus,
                         onSubmitted: (_) => _send(),
                         textCapitalization: TextCapitalization.sentences,
                         decoration: InputDecoration(
+                          suffixIcon: IconButton(
+                            tooltip: emojiOpen ? 'Show keyboard' : 'Add an emoji',
+                            onPressed: _toggleEmoji,
+                            icon: Icon(emojiOpen ? Icons.keyboard_alt_outlined : Icons.emoji_emotions_outlined, color: C.muted),
+                          ),
                           hintText: 'Write a reply',
                           hintStyle: TextStyle(color: C.muted),
                           filled: true,
@@ -777,6 +892,23 @@ class _ConversationBodyState extends State<ConversationBody> with WidgetsBinding
               _roundButton(icon: Icons.mic_rounded, onTap: _startRecording),
           ]),
         ),
+        if (emojiOpen && !recording) ...[
+          SizedBox(
+            height: 270,
+            child: EmojiPicker(
+              textEditingController: input,
+              config: Config(
+                height: 270,
+                checkPlatformCompatibility: true,
+                emojiViewConfig: EmojiViewConfig(backgroundColor: C.surface, emojiSizeMax: 28),
+                categoryViewConfig: CategoryViewConfig(backgroundColor: C.surface, indicatorColor: C.primary, iconColor: C.muted, iconColorSelected: C.primary, backspaceColor: C.primary),
+                bottomActionBarConfig: BottomActionBarConfig(backgroundColor: C.surface, buttonColor: C.surface2, buttonIconColor: C.muted),
+                searchViewConfig: SearchViewConfig(backgroundColor: C.surface, buttonIconColor: C.primary),
+              ),
+            ),
+          ),
+          if (widget.avoidTabBar) const SizedBox(height: 100),
+        ],
       ]);
 }
 

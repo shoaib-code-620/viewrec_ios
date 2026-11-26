@@ -33,7 +33,7 @@ class _CreateContentScreenState extends State<CreateContentScreen> {
         onTap: onTap,
         scale: 0.97,
         child: Container(
-          height: wide ? 118 : 148,
+          height: wide ? 134 : 170,
           padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(32),
@@ -57,7 +57,7 @@ class _CreateContentScreenState extends State<CreateContentScreen> {
                         child: Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.start, children: [
                           Text(title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 19, letterSpacing: -0.4)),
                           const SizedBox(height: 3),
-                          Text(sub, style: TextStyle(color: Colors.white.withValues(alpha: 0.85), fontSize: 12.5, height: 1.3)),
+                          Text(sub, style: TextStyle(color: Colors.white.withValues(alpha: 0.85), fontSize: 13, height: 1.3)),
                         ]),
                       ),
                       const Icon(Icons.arrow_forward_rounded, color: Colors.white),
@@ -70,7 +70,7 @@ class _CreateContentScreenState extends State<CreateContentScreen> {
                         child: Icon(icon, color: Colors.white, size: 22),
                       ),
                       const Spacer(),
-                      Text(title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 16.5, letterSpacing: -0.3)),
+                      Text(title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 17, letterSpacing: -0.3)),
                       Text(sub, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: Colors.white.withValues(alpha: 0.85), fontSize: 12)),
                     ]),
             ]),
@@ -82,7 +82,7 @@ class _CreateContentScreenState extends State<CreateContentScreen> {
         padding: const EdgeInsets.only(top: 6, bottom: 12),
         child: Row(children: [
           Expanded(child: Text(title, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, letterSpacing: -0.8))),
-          if (action != null) Text(action, style: TextStyle(color: C.primary, fontWeight: FontWeight.w700, fontSize: 13.5)),
+          if (action != null) Text(action, style: TextStyle(color: C.primary, fontWeight: FontWeight.w700, fontSize: 14)),
         ]),
       );
 
@@ -94,7 +94,7 @@ class _CreateContentScreenState extends State<CreateContentScreen> {
       const SizedBox(height: 6),
       const Muted('Turn a happy customer into a post in a few taps.'),
       const SizedBox(height: 18),
-      _tile('Record a video', 'Script with AI, captions and your logos', Icons.videocam_rounded, const [Color(0xFFFF9D92), Color(0xFFE4513F)], () => _open(const CaptionStudioScreen()), wide: true),
+      _tile('Record a video', 'Script, captions and your logos', Icons.videocam_rounded, const [Color(0xFFFF9D92), Color(0xFFE4513F)], () => _open(const CaptionStudioScreen()), wide: true),
       const SizedBox(height: 12),
       Row(children: [
         Expanded(child: _tile('Quote card', 'From a review', Icons.format_quote_rounded, const [Color(0xFF3E94F5), Color(0xFF0847A0)], () => _open(const _Maker(format: 0)))),
@@ -124,14 +124,14 @@ class _CreateContentScreenState extends State<CreateContentScreen> {
                 width: 118,
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(26),
+                  borderRadius: BorderRadius.circular(28),
                   gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: g),
                   boxShadow: [BoxShadow(color: g.last.withValues(alpha: 0.3), blurRadius: 16, offset: const Offset(0, 8))],
                 ),
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   const Icon(Icons.format_quote_rounded, color: Colors.white70, size: 26),
                   const Spacer(),
-                  Text(names[i], maxLines: 2, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 13.5, height: 1.2)),
+                  Text(names[i], maxLines: 2, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 14, height: 1.2)),
                 ]),
               ),
             );
@@ -172,7 +172,7 @@ class _MakerState extends State<_Maker> {
   static const formats = ['Quote card', 'Video clip', 'Story', 'Carousel'];
   static const stepNames = ['Review', 'Style', 'Words', 'Post to'];
   final vids = demoVideos();
-  final caption = TextEditingController(text: 'Another happy customer! “They turned up when they said they would…” Thank you for the kind words.');
+  final caption = TextEditingController(text: '“They turned up when they said they would…” Thank you for the kind words.');
   final chosen = <String>{'Facebook', 'Instagram'};
   final page = PageController();
   int step = 0, source = 0, style = 0, format = 0;
@@ -213,7 +213,7 @@ class _MakerState extends State<_Maker> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.22), borderRadius: BorderRadius.circular(999)),
-            child: Text(formats[format], style: const TextStyle(color: Colors.white, fontSize: 11.5, fontWeight: FontWeight.w800)),
+            child: Text(formats[format], style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w800)),
           ),
           const Spacer(),
           Stars(v.rating),
@@ -248,8 +248,8 @@ class _MakerState extends State<_Maker> {
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.end, children: [
                   Stars(vids[i].rating),
                   const SizedBox(height: 4),
-                  Text(vids[i].name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13.5, color: Colors.white)),
-                  Text(vids[i].job, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11.5, color: Colors.white70)),
+                  Text(vids[i].name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14, color: Colors.white)),
+                  Text(vids[i].job, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, color: Colors.white70)),
                 ]),
               ),
             ),
@@ -273,11 +273,11 @@ class _MakerState extends State<_Maker> {
                   padding: const EdgeInsets.all(10),
                   alignment: Alignment.bottomLeft,
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(22),
+                    borderRadius: BorderRadius.circular(24),
                     gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: _styles[i].$2),
                     border: Border.all(color: style == i ? C.text : Colors.transparent, width: 2.5),
                   ),
-                  child: Text(_styles[i].$1, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 12.5)),
+                  child: Text(_styles[i].$1, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 13)),
                 ),
               ),
             ),
@@ -288,9 +288,9 @@ class _MakerState extends State<_Maker> {
         Field('Post text', controller: caption, lines: 5),
         Align(
           alignment: Alignment.centerRight,
-          child: AppButton('Rewrite with AI', icon: Icons.auto_awesome_rounded, small: true, style: BtnStyle.ghost, onTap: () {
-            setState(() => caption.text = 'Five stars from ${vids[source].name}! “${vids[source].quote}” Thank you, we love hearing this.');
-            showMsg(context, 'Caption rewritten');
+          child: AppButton('Suggest new wording', icon: Icons.edit_note_rounded, small: true, style: BtnStyle.ghost, onTap: () {
+            setState(() => caption.text = 'Five stars from ${vids[source].name}: “${vids[source].quote}” Thank you for the kind words.');
+            showMsg(context, 'New wording added');
           }),
         ),
       ]);
@@ -333,7 +333,7 @@ class _MakerState extends State<_Maker> {
                           decoration: BoxDecoration(borderRadius: BorderRadius.circular(3), color: i <= step ? C.primary : C.border),
                         ),
                         const SizedBox(height: 6),
-                        Text(stepNames[i], style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w800, color: i == step ? C.text : C.muted)),
+                        Text(stepNames[i], style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: i == step ? C.text : C.muted)),
                       ]),
                     ),
                   ),

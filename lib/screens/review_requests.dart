@@ -72,7 +72,7 @@ class _BodyState extends State<_Body> {
                 if (shown[i].status != 'pending') StatusBadge(shown[i].status == 'approved' ? 'approved' : 'skipped'),
               ]),
               const SizedBox(height: 10),
-              Text(shown[i].message, style: TextStyle(color: C.muted, fontSize: 13.5, height: 1.4)),
+              Text(shown[i].message, style: TextStyle(color: C.muted, fontSize: 14, height: 1.4)),
               if (shown[i].status == 'pending') ...[
                 const SizedBox(height: 12),
                 Row(children: [

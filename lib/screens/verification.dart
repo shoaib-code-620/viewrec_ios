@@ -54,7 +54,7 @@ class _VerificationBodyState extends State<_VerificationBody> {
             child: Column(children: [
               GlossIcon(icon, c, size: 58),
               const SizedBox(height: 8),
-              Text(label, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700)),
+              Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
             ]),
           ),
         );

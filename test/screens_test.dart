@@ -4,7 +4,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:viewrec/data.dart';
 import 'package:viewrec/media_data.dart';
 import 'package:viewrec/models.dart';
+import 'package:viewrec/screens/admin.dart';
 import 'package:viewrec/screens/inbox.dart';
+import 'package:viewrec/screens/publishing_where.dart';
+import 'package:viewrec/screens/invitations.dart';
 import 'package:viewrec/screens/media_profile.dart';
 import 'package:viewrec/screens/media_viewers.dart';
 import 'package:viewrec/screens/additional_services.dart';
@@ -67,6 +70,8 @@ final screens = <String, Widget Function()>{
   'Followers list': () => const FollowListScreen(businessId: 'b1', name: 'Brightside Dental'),
   'Following list': () => const FollowListScreen(businessId: 'b1', name: 'Brightside Dental', initialTab: 1),
   'Blocked accounts': () => const BlockedAccountsScreen(),
+  'Where they go': () => const Scaffold(body: PublishingWhereScreen()),
+  'Invitations sent': () => const Scaffold(body: InvitationsScreen()),
   'Caption studio': () => const CaptionStudioScreen(),
   'Language and region': () => const LanguageRegionScreen(),
   'Password and sign-in': () => const PasswordSignInScreen(),
@@ -88,7 +93,7 @@ final screens = <String, Widget Function()>{
   'Business profile': () => const BusinessProfileScreen(),
   'Branding': () => const BrandingScreen(),
   'Opt-outs': () => const OptOutsScreen(),
-  'Team': () => const TeamScreen(),
+  'Team': () => const Scaffold(body: AdminScreen()),
   'Notification prefs': () => const NotificationPrefsScreen(),
   'Rewards': () => const RewardsScreen(),
   'Managed services': () => const ManagedServicesScreen(),

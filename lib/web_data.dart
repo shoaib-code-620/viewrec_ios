@@ -54,17 +54,68 @@ class CaptionLine {
   Map<String, dynamic> toJson() => {'startMs': startMs, 'endMs': endMs, 'text': text};
 }
 
+/// Somewhere an approved testimonial can go: your own website (a webhook) or a platform you post to by hand.
+class PublishDestination {
+  final String id, kind, name, url;
+  /// Only for a website: the secret used to sign what we send, so the site can check it came from us.
+  final String secret;
+  const PublishDestination({required this.id, required this.kind, required this.name, this.url = '', this.secret = ''});
+  bool get isWebsite => kind == 'website';
+  factory PublishDestination.fromJson(Map<String, dynamic> j) => PublishDestination(
+        id: '${j['id']}',
+        kind: j['kind'] ?? 'website',
+        name: j['name'] ?? '',
+        url: j['url'] ?? '',
+        secret: j['secret'] ?? '',
+      );
+}
+
+/// What a team member can open, section by section: none, view or edit.
+const teamSections = [
+  ('testimonials', 'Testimonials', 'Watch, approve and manage reviews'),
+  ('create', 'Create content', 'Record and save the business\'s own videos'),
+  ('gallery', 'Gallery', 'The business\'s own videos, pictures and files'),
+  ('phonebook', 'Business Phonebook', 'Customers, invitations, groups and the calendar'),
+  ('leads', 'Leads and Requests', 'People asking to be contacted'),
+  ('automations', 'Automations', 'Scheduled reminders and follow-ups'),
+  ('pages', 'Your pages', 'Review page, questions and business page'),
+  ('publishing', 'Publishing', 'Posting schedule and website embed'),
+  ('accounts', 'Connected accounts', 'Facebook, Instagram and other sign-ins'),
+  ('clients', 'Clients', 'Businesses you manage for others'),
+];
+
+class TeamMember {
+  final String id, name, email;
+  /// section key -> none | view | edit
+  Map<String, String> access;
+  final bool pending;
+  TeamMember({required this.id, required this.name, required this.email, required this.access, this.pending = true});
+  factory TeamMember.fromJson(Map<String, dynamic> j) => TeamMember(
+        id: '${j['id']}',
+        name: j['name'] ?? '',
+        email: j['email'] ?? '',
+        access: Map<String, String>.from(j['access'] ?? const {}),
+        pending: j['pending'] != false,
+      );
+}
+
 class Bundle {
   final String id;
   String name;
   List<String> memberIds;
   String lastSent;
-  Bundle({required this.id, required this.name, required this.memberIds, this.lastSent = 'Never sent'});
+  /// What the group is for: 'offer' (people who already bought) or 'approach' (people who have not yet).
+  String purpose;
+  String note;
+  Bundle({required this.id, required this.name, required this.memberIds, this.lastSent = 'Never sent', this.purpose = 'offer', this.note = ''});
+  String get purposeLabel => purpose == 'approach' ? 'first approach' : 'offer'; 
   factory Bundle.fromJson(Map<String, dynamic> j) => Bundle(
         id: '${j['id']}',
         name: j['name'] ?? '',
         memberIds: [for (final m in (j['memberIds'] as List? ?? [])) '$m'],
         lastSent: j['lastSent'] ?? 'Never sent',
+        purpose: j['purpose'] ?? 'offer',
+        note: j['note'] ?? '',
       );
 }
 
@@ -72,7 +123,9 @@ class CalendarEvent {
   final String id, title, who;
   final DateTime date;
   final String kind; // invite | reminder | automation | bundle
-  const CalendarEvent({required this.id, required this.date, required this.title, required this.kind, this.who = ''});
+  /// True for things you scheduled yourself, which you can cancel.
+  final bool mine;
+  const CalendarEvent({required this.id, required this.date, required this.title, required this.kind, this.who = '', this.mine = false});
   factory CalendarEvent.fromJson(Map<String, dynamic> j) => CalendarEvent(
         id: '${j['id']}',
         date: DateTime.tryParse(j['date'] ?? '') ?? DateTime.now(),
@@ -203,15 +256,29 @@ abstract class WebRepo {
   Future<GalleryFolder> createGalleryFolder(String name);
 
   Future<List<Bundle>> bundles();
+  Future<List<TeamMember>> teamMembers();
+  /// [method] is 'invite' (they choose a password from a link) or 'password' (you set it and it is emailed with the invitation).
+  Future<TeamMember> inviteTeamMember({required String name, required String email, required Map<String, String> access, required String method, String? password});
+  Future<void> updateTeamAccess(String id, Map<String, String> access);
+  Future<void> removeTeamMember(String id);
+  Future<List<PublishDestination>> destinations();
+  Future<PublishDestination> addDestination({required String kind, required String name, String url = ''});
+  Future<void> deleteDestination(String id);
   /// Turn the speech in a recorded video into timed caption lines. [script] is the planned wording, if any.
   Future<List<CaptionLine>> transcribeVideo(String path, {required int durationMs, String script = ''});
   /// Write a short video script with AI. [tone] is friendly, professional or punchy.
   Future<String> writeScript({required String topic, String tone = 'friendly', String business = ''});
-  Future<Bundle> saveBundle({String? id, required String name, required List<String> memberIds});
+  Future<Bundle> saveBundle({String? id, required String name, required List<String> memberIds, String purpose = 'offer', String note = ''});
   Future<void> deleteBundle(String id);
   Future<void> sendBundle(String id, {required String subject, required String body});
 
   Future<List<CalendarEvent>> calendarEvents(DateTime month);
+  /// A note to yourself on [date]. With [repeatEveryDays] it comes back on that cycle.
+  Future<void> createReminder({required DateTime date, required String about, int? repeatEveryDays});
+  /// Email a group on a day you choose. Anyone who opted out is skipped.
+  Future<void> scheduleGroupEmail({required String bundleId, required DateTime date, required String subject, required String body});
+  /// Cancel a reminder or group email you scheduled.
+  Future<void> cancelScheduled(String id);
 
   Future<List<ReviewTemplate>> templates();
   Future<ReviewTemplate> saveTemplate({String? id, required String name, required List<String> questions});
@@ -239,6 +306,8 @@ abstract class WebRepo {
   Future<ThreadMessage> sendSupportMessage(String text);
   Future<ThreadMessage> sendSupportAttachment({required String kind, required String path, required String name, int size = 0, int durationMs = 0, void Function(double)? onProgress});
   Future<ThreadMessage> editSupportMessage(String messageId, String text);
+  /// React to a Support message with an emoji, or pass null to take your reaction back.
+  Future<void> reactSupportMessage(String messageId, String? emoji);
   Future<void> deleteSupportMessage(String messageId);
 
   Future<SecurityInfo> security();
@@ -313,6 +382,51 @@ class MockWebRepo implements WebRepo {
   @override
   Future<List<Bundle>> bundles() => _w(List.of(_bundles));
 
+  final _team = <TeamMember>[];
+
+  @override
+  Future<List<TeamMember>> teamMembers() => _w(List.of(_team));
+
+  @override
+  Future<TeamMember> inviteTeamMember({required String name, required String email, required Map<String, String> access, required String method, String? password}) async {
+    if (_team.any((m) => m.email.toLowerCase() == email.toLowerCase())) throw Exception('$email is already on your team');
+    if (_team.length >= 10) throw Exception('Your team is full (10 of 10).');
+    final m = TeamMember(id: _id(), name: name, email: email, access: Map.of(access));
+    _team.add(m);
+    return _w(m);
+  }
+
+  @override
+  Future<void> updateTeamAccess(String id, Map<String, String> access) async {
+    _team.firstWhere((m) => m.id == id).access = Map.of(access);
+    await _w(null);
+  }
+
+  @override
+  Future<void> removeTeamMember(String id) async {
+    _team.removeWhere((m) => m.id == id);
+    await _w(null);
+  }
+
+  final _destinations = <PublishDestination>[];
+
+  @override
+  Future<List<PublishDestination>> destinations() => _w(List.of(_destinations));
+
+  @override
+  Future<PublishDestination> addDestination({required String kind, required String name, String url = ''}) async {
+    if (kind == 'website' && !(Uri.tryParse(url)?.hasAuthority ?? false)) throw Exception('Enter the full web address, starting with https://');
+    final d = PublishDestination(id: _id(), kind: kind, name: name, url: url, secret: kind == 'website' ? 'whsec_${_id()}a9f3c1d7' : '');
+    _destinations.add(d);
+    return _w(d);
+  }
+
+  @override
+  Future<void> deleteDestination(String id) async {
+    _destinations.removeWhere((d) => d.id == id);
+    await _w(null);
+  }
+
   @override
   Future<List<CaptionLine>> transcribeVideo(String path, {required int durationMs, String script = ''}) async {
     final text = script.trim().isEmpty
@@ -331,19 +445,21 @@ class MockWebRepo implements WebRepo {
     final text = switch (tone) {
       'professional' => 'Hello, and thank you for watching. At $who we specialise in $t. Our work is carried out to a high standard, with clear pricing and no surprises. Contact us today to arrange a free consultation.',
       'punchy' => 'Need $t? We have got you. Fast. Fair. Done right. Message $who today.',
-      _ => 'Hi there! Quick hello from $who. If you are thinking about $t, we would love to help. We keep things simple, honest and friendly. Drop us a message and we will sort you out.',
+      _ => 'Hello, this is $who. If you are thinking about $t, we can help. We keep things simple and honest, and we are easy to reach. Send us a message and we will get back to you.',
     };
     return _w(text);
   }
   @override
-  Future<Bundle> saveBundle({String? id, required String name, required List<String> memberIds}) async {
+  Future<Bundle> saveBundle({String? id, required String name, required List<String> memberIds, String purpose = 'offer', String note = ''}) async {
     if (id != null) {
       final b = _bundles.firstWhere((x) => x.id == id);
       b.name = name;
       b.memberIds = memberIds;
+      b.purpose = purpose;
+      b.note = note;
       return _w(b);
     }
-    final b = Bundle(id: _id(), name: name, memberIds: memberIds);
+    final b = Bundle(id: _id(), name: name, memberIds: memberIds, purpose: purpose, note: note);
     _bundles.insert(0, b);
     return _w(b);
   }
@@ -361,6 +477,31 @@ class MockWebRepo implements WebRepo {
   }
 
   // calendar
+  final _myReminders = <CalendarEvent>[];
+
+  @override
+  Future<void> createReminder({required DateTime date, required String about, int? repeatEveryDays}) async {
+    final times = repeatEveryDays == null ? 1 : 12;
+    for (var i = 0; i < times; i++) {
+      final day = DateTime(date.year, date.month, date.day).add(Duration(days: i * (repeatEveryDays ?? 0)));
+      _myReminders.add(CalendarEvent(id: _id(), date: day, title: about, kind: 'reminder', who: 'Reminder to you', mine: true));
+    }
+    await _w(null);
+  }
+
+  @override
+  Future<void> scheduleGroupEmail({required String bundleId, required DateTime date, required String subject, required String body}) async {
+    final b = _bundles.firstWhere((x) => x.id == bundleId);
+    _myReminders.add(CalendarEvent(id: _id(), date: DateTime(date.year, date.month, date.day), title: 'Group email: ${b.name}', kind: 'bundle', who: '${b.memberIds.length} people', mine: true));
+    await _w(null);
+  }
+
+  @override
+  Future<void> cancelScheduled(String id) async {
+    _myReminders.removeWhere((e) => e.id == id);
+    await _w(null);
+  }
+
   @override
   Future<List<CalendarEvent>> calendarEvents(DateTime month) {
     final n = DateTime.now();
@@ -376,7 +517,7 @@ class MockWebRepo implements WebRepo {
       CalendarEvent(id: 'c8', date: d(7), title: 'Reminder 1 due', kind: 'reminder', who: 'Lena Fischer'),
       CalendarEvent(id: 'c9', date: d(11), title: 'Ask after job', kind: 'automation', who: 'Imran Qureshi'),
     ];
-    return _w(all.where((e) => e.date.year == month.year && e.date.month == month.month).toList());
+    return _w([...all, ..._myReminders].where((e) => e.date.year == month.year && e.date.month == month.month).toList());
   }
 
   // templates
@@ -519,6 +660,12 @@ class MockWebRepo implements WebRepo {
   }
 
   @override
+  Future<void> reactSupportMessage(String messageId, String? emoji) async {
+    _support.firstWhere((x) => x.id == messageId).myReaction = emoji;
+    await _w(null);
+  }
+
+  @override
   Future<ThreadMessage> editSupportMessage(String messageId, String text) async {
     final m = _support.firstWhere((x) => x.id == messageId);
     m.text = text;
@@ -647,6 +794,29 @@ class ApiWebRepo implements WebRepo {
   Future<List<Bundle>> bundles() async => _list(await _call('GET', '/api/v1/bundles'), Bundle.fromJson);
 
   @override
+  Future<List<TeamMember>> teamMembers() async => _list(await _call('GET', '/api/v1/team'), TeamMember.fromJson);
+
+  @override
+  Future<TeamMember> inviteTeamMember({required String name, required String email, required Map<String, String> access, required String method, String? password}) async =>
+      TeamMember.fromJson(await _call('POST', '/api/v1/team', {'name': name, 'email': email, 'access': access, 'method': method, if (password != null) 'password': password}));
+
+  @override
+  Future<void> updateTeamAccess(String id, Map<String, String> access) => _call('PUT', '/api/v1/team/$id', {'access': access});
+
+  @override
+  Future<void> removeTeamMember(String id) => _call('DELETE', '/api/v1/team/$id');
+
+  @override
+  Future<List<PublishDestination>> destinations() async => _list(await _call('GET', '/api/v1/publishing/destinations'), PublishDestination.fromJson);
+
+  @override
+  Future<PublishDestination> addDestination({required String kind, required String name, String url = ''}) async =>
+      PublishDestination.fromJson(await _call('POST', '/api/v1/publishing/destinations', {'kind': kind, 'name': name, if (url.isNotEmpty) 'url': url}));
+
+  @override
+  Future<void> deleteDestination(String id) => _call('DELETE', '/api/v1/publishing/destinations/$id');
+
+  @override
   Future<List<CaptionLine>> transcribeVideo(String path, {required int durationMs, String script = ''}) async {
     final req = http.MultipartRequest('POST', _u('/api/v1/ai/transcribe'))
       ..headers.addAll(ApiAuth.headers())
@@ -665,12 +835,27 @@ class ApiWebRepo implements WebRepo {
     return (j is Map ? j['script'] : j).toString();
   }
   @override
-  Future<Bundle> saveBundle({String? id, required String name, required List<String> memberIds}) async =>
-      Bundle.fromJson(await _call(id == null ? 'POST' : 'PUT', id == null ? '/api/v1/bundles' : '/api/v1/bundles/$id', {'name': name, 'memberIds': memberIds}));
+  Future<Bundle> saveBundle({String? id, required String name, required List<String> memberIds, String purpose = 'offer', String note = ''}) async =>
+      Bundle.fromJson(await _call(id == null ? 'POST' : 'PUT', id == null ? '/api/v1/bundles' : '/api/v1/bundles/$id', {'name': name, 'memberIds': memberIds, 'purpose': purpose, 'note': note}));
   @override
   Future<void> deleteBundle(String id) => _call('DELETE', '/api/v1/bundles/$id');
   @override
   Future<void> sendBundle(String id, {required String subject, required String body}) => _call('POST', '/api/v1/bundles/$id/send', {'subject': subject, 'body': body});
+
+  @override
+  Future<void> scheduleGroupEmail({required String bundleId, required DateTime date, required String subject, required String body}) {
+    final d = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+    return _call('POST', '/api/v1/bundles/$bundleId/schedule', {'date': d, 'subject': subject, 'body': body});
+  }
+
+  @override
+  Future<void> cancelScheduled(String id) => _call('DELETE', '/api/v1/scheduled/$id');
+
+  @override
+  Future<void> createReminder({required DateTime date, required String about, int? repeatEveryDays}) {
+    final d = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+    return _call('POST', '/api/v1/reminders', {'date': d, 'about': about, if (repeatEveryDays != null) 'repeatEveryDays': repeatEveryDays});
+  }
 
   @override
   Future<List<CalendarEvent>> calendarEvents(DateTime month) async => _list(await _call('GET', '/api/v1/calendar?month=${month.year}-${month.month.toString().padLeft(2, '0')}'), CalendarEvent.fromJson);
@@ -740,6 +925,9 @@ class ApiWebRepo implements WebRepo {
   Future<ThreadMessage> editSupportMessage(String messageId, String text) async => ThreadMessage.fromJson(await _call('PATCH', '/api/v1/support/thread/messages/$messageId', {'text': text}));
   @override
   Future<void> deleteSupportMessage(String messageId) => _call('DELETE', '/api/v1/support/thread/messages/$messageId');
+  @override
+  Future<void> reactSupportMessage(String messageId, String? emoji) =>
+      emoji == null ? _call('DELETE', '/api/v1/support/thread/messages/$messageId/reaction') : _call('PUT', '/api/v1/support/thread/messages/$messageId/reaction', {'emoji': emoji});
 
   @override
   Future<void> changePassword({required String current, required String next}) =>

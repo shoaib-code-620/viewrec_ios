@@ -340,7 +340,7 @@ class _ComposeScreenState extends State<ComposeScreen> {
             Container(
               height: tall ? 300 : 240,
               alignment: Alignment.center,
-              decoration: BoxDecoration(color: C.surface, borderRadius: BorderRadius.circular(22), border: Border.all(color: C.border)),
+              decoration: BoxDecoration(color: C.surface, borderRadius: BorderRadius.circular(24), border: Border.all(color: C.border)),
               child: Column(mainAxisSize: MainAxisSize.min, children: [
                 Icon(_isReel ? Icons.movie_creation_rounded : _isStory ? Icons.auto_stories_rounded : Icons.grid_on_rounded, size: 44, color: C.muted),
                 const SizedBox(height: 10),
@@ -388,7 +388,7 @@ class _ComposeScreenState extends State<ComposeScreen> {
                           child: IgnorePointer(
                             child: Container(
                               padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-                              decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.45), borderRadius: BorderRadius.circular(9)),
+                              decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.45), borderRadius: BorderRadius.circular(8)),
                               child: Text(_fmtMs(durMs), style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w700)),
                             ),
                           ),

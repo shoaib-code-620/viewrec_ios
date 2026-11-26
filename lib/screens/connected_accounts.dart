@@ -110,7 +110,7 @@ class _AccountsBodyState extends State<_AccountsBody> {
                               foregroundColor: connected.containsKey(platforms[i].id) ? C.muted : C.primary,
                               padding: const EdgeInsets.symmetric(horizontal: 14),
                             ),
-                            child: Text(connected.containsKey(platforms[i].id) ? 'Manage' : 'Connect', style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700)),
+                            child: Text(connected.containsKey(platforms[i].id) ? 'Manage' : 'Connect', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
                           ),
                         ),
                 ),

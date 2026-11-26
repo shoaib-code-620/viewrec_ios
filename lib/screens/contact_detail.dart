@@ -128,7 +128,7 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
                       child: Padding(
                         padding: const EdgeInsets.only(bottom: 14),
                         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                          Text(events[i].$1, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14.5, color: events[i].$3 ? C.text : C.muted)),
+                          Text(events[i].$1, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15, color: events[i].$3 ? C.text : C.muted)),
                           const SizedBox(height: 2),
                           Muted(events[i].$2, size: 12.5),
                         ]),

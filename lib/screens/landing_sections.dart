@@ -19,14 +19,14 @@ const _body = Color(0xFF41567A);
 class _LandingSectionsState extends State<LandingSections> {
   Widget _eyebrow(String t, Color c) => Padding(
         padding: const EdgeInsets.only(bottom: 10),
-        child: Text(t, style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w800, letterSpacing: 1.3, color: c)),
+        child: Text(t, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, letterSpacing: 1.3, color: c)),
       );
 
   Widget _h(String t, {Color? color, double size = 30}) => Text(t, style: TextStyle(fontSize: size, fontWeight: FontWeight.w800, letterSpacing: -1.3, height: 1.08, color: color ?? C.text));
 
   Widget _p(String t, {Color? color}) => Padding(
         padding: const EdgeInsets.only(top: 10),
-        child: Text(t, style: TextStyle(fontSize: 14.5, height: 1.55, color: color ?? (C.dark ? C.muted : _body))),
+        child: Text(t, style: TextStyle(fontSize: 15, height: 1.55, color: color ?? (C.dark ? C.muted : _body))),
       );
 
   /// A big rounded panel, tinted like the design's coloured sections.
@@ -50,7 +50,7 @@ class _LandingSectionsState extends State<LandingSections> {
           border: Border.all(color: Colors.white.withValues(alpha: 0.4)),
           boxShadow: [BoxShadow(color: g.last.withValues(alpha: 0.35), blurRadius: 10, offset: const Offset(0, 4))],
         ),
-        child: Text(t, style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w800, color: fg)),
+        child: Text(t, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: fg)),
       );
 
   Widget _glassPill(String t, {IconData? icon, Color? color}) => Container(
@@ -63,7 +63,7 @@ class _LandingSectionsState extends State<LandingSections> {
         ),
         child: Row(mainAxisSize: MainAxisSize.min, children: [
           if (icon != null) ...[Icon(icon, size: 15, color: color ?? C.primary), const SizedBox(width: 6)],
-          Text(t, style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: C.text)),
+          Text(t, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: C.text)),
         ]),
       );
 
@@ -78,7 +78,7 @@ class _LandingSectionsState extends State<LandingSections> {
         boxShadow: [BoxShadow(color: C.primary.withValues(alpha: 0.32), blurRadius: 22, offset: const Offset(0, 10))],
       ),
       child: Row(children: [
-        const Text('PUBLISHES TO', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w800, letterSpacing: 1.1, color: Colors.white)),
+        const Text('PUBLISHES TO', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 1.1, color: Colors.white)),
         const SizedBox(width: 12),
         Expanded(
           child: SizedBox(
@@ -176,13 +176,13 @@ class _LandingSectionsState extends State<LandingSections> {
         ]),
         const SizedBox(height: 18),
         _glassCard(Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('WITHOUT A COACH', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w800, letterSpacing: 1.1, color: C.muted)),
+          Text('WITHOUT A COACH', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 1.1, color: C.muted)),
           const SizedBox(height: 4),
-          Text('"They were great. Would recommend."', style: TextStyle(fontSize: 13.5, color: C.muted)),
+          Text('"They were great. Would recommend."', style: TextStyle(fontSize: 14, color: C.muted)),
         ])),
         const SizedBox(height: 12),
         _glassCard(Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('WITH THE AI COACH', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w800, letterSpacing: 1.1, color: C.primary)),
+          Text('WITH THE AI COACH', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 1.1, color: C.primary)),
           const SizedBox(height: 12),
           _bubble('Customer', 'They were great, would recommend.'),
           _bubble('AI coach', 'What was the problem before you called them?', coach: true),
@@ -337,7 +337,7 @@ class _LandingSectionsState extends State<LandingSections> {
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Text(it.$2, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
                   const SizedBox(height: 3),
-                  Text(it.$3, style: TextStyle(fontSize: 13.5, height: 1.45, color: C.muted)),
+                  Text(it.$3, style: TextStyle(fontSize: 14, height: 1.45, color: C.muted)),
                 ]),
               ),
             ]),
@@ -394,7 +394,7 @@ class _LandingSectionsState extends State<LandingSections> {
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             const Text('Managed and Agency', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
             const SizedBox(height: 2),
-            Text('Our team runs it, or you resell it', style: TextStyle(fontSize: 13.5, color: C.muted)),
+            Text('Our team runs it, or you resell it', style: TextStyle(fontSize: 14, color: C.muted)),
             const SizedBox(height: 10),
             _h("Let's talk", size: 28),
             const SizedBox(height: 14),
@@ -435,7 +435,7 @@ class _LandingSectionsState extends State<LandingSections> {
                     borderRadius: BorderRadius.circular(999),
                     boxShadow: [BoxShadow(color: const Color(0xFFF2A100).withValues(alpha: 0.5), blurRadius: 18, offset: const Offset(0, 7))],
                   ),
-                  child: const Text('Start for \$1', style: TextStyle(fontSize: 15.5, fontWeight: FontWeight.w800, color: _navy)),
+                  child: const Text('Start for \$1', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: _navy)),
                 ),
               ),
             ]),
@@ -467,9 +467,9 @@ class _LandingSectionsState extends State<LandingSections> {
       gap,
       _closing(),
       const SizedBox(height: 16),
-      Center(child: Text('Built by Systematic IT Solutions. Customers and opt-outs are respected permanently.', textAlign: TextAlign.center, style: TextStyle(fontSize: 11.5, color: C.muted))),
+      Center(child: Text('Built by Systematic IT Solutions. Customers and opt-outs are respected permanently.', textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: C.muted))),
       const SizedBox(height: 4),
-      Center(child: Text('© 2026 ViewRec', style: TextStyle(fontSize: 11.5, color: C.muted))),
+      Center(child: Text('© 2026 ViewRec', style: TextStyle(fontSize: 12, color: C.muted))),
     ]);
   }
 }

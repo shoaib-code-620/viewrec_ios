@@ -35,7 +35,7 @@ class _LinkBox extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(14, 6, 6, 6),
         decoration: BoxDecoration(color: C.surface2, borderRadius: BorderRadius.circular(rMd)),
         child: Row(children: [
-          Expanded(child: Text(link, style: const TextStyle(fontFamily: 'monospace', fontSize: 12.5), overflow: TextOverflow.ellipsis)),
+          Expanded(child: Text(link, style: const TextStyle(fontFamily: 'monospace', fontSize: 13), overflow: TextOverflow.ellipsis)),
           IconButton(icon: const Icon(Icons.copy_rounded, size: 18), onPressed: () {
             Clipboard.setData(ClipboardData(text: link));
             showMsg(context, 'Link copied');
@@ -97,7 +97,7 @@ class _ReviewPageState extends State<_ReviewPage> {
                       child: Row(children: [
                         SizedBox(width: 72, child: VideoThumb(hue: v.hue, height: 56)),
                         const SizedBox(width: 12),
-                        Expanded(child: Text('“${v.quote}”', maxLines: 3, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12.5, height: 1.35))),
+                        Expanded(child: Text('“${v.quote}”', maxLines: 3, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13, height: 1.35))),
                       ]),
                     ),
                 ]),

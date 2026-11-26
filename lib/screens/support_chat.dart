@@ -19,11 +19,30 @@ class SupportConversation extends ConversationSource {
   Future<ThreadMessage> edit(String messageId, String text) => webRepo.editSupportMessage(messageId, text);
   @override
   Future<void> delete(String messageId) => webRepo.deleteSupportMessage(messageId);
+  @override
+  Future<void> react(String messageId, String? emoji) => webRepo.reactSupportMessage(messageId, emoji);
+}
+
+/// Support as its own full screen with a back arrow and no tab bar, the same as the Inbox.
+class SupportScreen extends StatelessWidget {
+  const SupportScreen({super.key});
+  @override
+  Widget build(BuildContext context) => Scaffold(
+        body: SafeArea(
+          bottom: false,
+          child: Column(children: [
+            const Padding(padding: EdgeInsets.fromLTRB(18, 10, 18, 0), child: BackHeader('Support')),
+            const Expanded(child: SupportChatScreen()),
+          ]),
+        ),
+      );
 }
 
 /// Support: a conversation with the ViewRec team. Text, photos, files and voice notes, with ticks, edit and delete.
 class SupportChatScreen extends StatelessWidget {
-  const SupportChatScreen({super.key});
+  /// Leave room for the floating tab bar when this sits inside the main tabs. Off when it is a full screen.
+  final bool avoidTabBar;
+  const SupportChatScreen({super.key, this.avoidTabBar = false});
   @override
   Widget build(BuildContext context) => AsyncView<List<ThreadMessage>>(
         load: webRepo.supportThread,
@@ -47,7 +66,7 @@ class SupportChatScreen extends StatelessWidget {
               source: SupportConversation(),
               initial: msgs,
               quick: const ['I need help with my plan', 'A recording did not upload', 'How do I embed my reviews?'],
-              avoidTabBar: true,
+              avoidTabBar: avoidTabBar,
             ),
           ),
         ]),

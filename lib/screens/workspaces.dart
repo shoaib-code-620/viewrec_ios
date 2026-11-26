@@ -75,7 +75,7 @@ class _BodyState extends State<_Body> {
                   duration: kMed,
                   transitionBuilder: (c, a) => ScaleTransition(scale: a, child: c),
                   child: list[i].current
-                      ? Container(key: const ValueKey('on'), padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5), decoration: BoxDecoration(color: C.green.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(999)), child: Text('Current', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w800, color: C.green)))
+                      ? Container(key: const ValueKey('on'), padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5), decoration: BoxDecoration(color: C.green.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(999)), child: Text('Current', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: C.green)))
                       : Icon(Icons.swap_horiz_rounded, key: const ValueKey('off'), color: C.muted),
                 ),
               ]),

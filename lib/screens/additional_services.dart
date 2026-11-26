@@ -3,6 +3,8 @@ import '../liquid_widgets.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'verification.dart';
+import 'referrals.dart';
+import 'settings_extra.dart';
 
 class AdditionalServicesScreen extends StatelessWidget {
   const AdditionalServicesScreen({super.key});
@@ -17,7 +19,7 @@ class AdditionalServicesScreen extends StatelessWidget {
       (Icons.support_agent_rounded, 'Your own agent', 'An agent available around the clock', C.green, const ManagedServicesScreen()),
       (Icons.verified_user_rounded, 'Verification', 'Get your blue tick so you can post your own photos and videos', C.blue, const _VerificationPage()),
       (Icons.verified_rounded, 'Business profiles', 'We keep your Google and social profiles active', C.primary, const ManagedServicesScreen()),
-      (Icons.people_alt_rounded, 'Referral credit', 'Earn credit for businesses you bring', C.rec, const ReferralsScreen()),
+      (Icons.people_alt_rounded, 'Referral credit', 'Earn credit for businesses you bring', C.rec, const SubPageShell(title: 'Referrals', child: ReferralHubScreen())),
       (Icons.call_rounded, 'Talk to our team', 'Book a setup call', C.primary, const TalkToTeamScreen()),
     ];
     return AppPage(children: [
@@ -33,7 +35,7 @@ class AdditionalServicesScreen extends StatelessWidget {
               const SizedBox(width: 14),
               Expanded(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(i.$2, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15.5)),
+                  Text(i.$2, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
                   const SizedBox(height: 2),
                   Muted(i.$3, size: 12.5),
                 ]),
@@ -188,7 +190,7 @@ class ReferralsScreen extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(14, 6, 6, 6),
           decoration: BoxDecoration(color: C.surface2, borderRadius: BorderRadius.circular(rMd)),
           child: Row(children: [
-            const Expanded(child: Text('https://viewrec.com/join/demo', style: TextStyle(fontFamily: 'monospace', fontSize: 12.5))),
+            const Expanded(child: Text('https://viewrec.com/join/demo', style: TextStyle(fontFamily: 'monospace', fontSize: 13))),
             IconButton(icon: const Icon(Icons.copy_rounded, size: 18), onPressed: () => showMsg(context, 'Copied')),
           ]),
         ),
@@ -219,7 +221,7 @@ class _TalkToTeamScreenState extends State<TalkToTeamScreen> {
         ] else ...[
           const Muted('Tell us about your business and the jobs you do. We will tell you honestly what your customer list can become.'),
           const SizedBox(height: 16),
-          const Field('Your name', initial: 'demo'),
+          const Field('Your name'),
           const Field('Business', initial: 'Hartley Roofing'),
           const Field('Phone', hint: '+44 …', keyboard: TextInputType.phone),
           const Field('What would you like help with?', lines: 4, hint: 'e.g. getting past customers to record videos'),

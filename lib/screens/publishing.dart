@@ -81,7 +81,7 @@ class _PublishingBodyState extends State<_PublishingBody> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text(p.title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14.5)),
+                    Text(p.title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
                     const SizedBox(height: 2),
                     Muted('${p.platform} · ${p.when}', size: 12.5),
                     if (p.status == 'published')

@@ -50,7 +50,7 @@ class FollowButton extends StatelessWidget {
               child: Icon(following ? Icons.check_rounded : Icons.add_rounded, key: ValueKey(following), size: 15, color: fg),
             ),
             const SizedBox(width: 4),
-            Text(following ? 'Following' : 'Follow', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w800, color: fg)),
+            Text(following ? 'Following' : 'Follow', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: fg)),
           ]),
         ),
       ),
@@ -111,7 +111,7 @@ class _StoryRingState extends State<StoryRing> with SingleTickerProviderStateMix
             ]),
           ),
           const SizedBox(height: 7),
-          Text(widget.name, maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center, style: TextStyle(fontSize: 11.5, fontWeight: widget.seen ? FontWeight.w500 : FontWeight.w700, color: widget.seen ? C.muted : C.text)),
+          Text(widget.name, maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center, style: TextStyle(fontSize: 12, fontWeight: widget.seen ? FontWeight.w500 : FontWeight.w700, color: widget.seen ? C.muted : C.text)),
         ]),
       ),
     );
@@ -281,9 +281,9 @@ class _CommentsBodyState extends State<_CommentsBody> {
                             Expanded(
                               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                                 Row(children: [
-                                  Text(c.author, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13.5)),
+                                  Text(c.author, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14)),
                                   const SizedBox(width: 8),
-                                  Text(c.when, style: TextStyle(fontSize: 11.5, color: C.muted)),
+                                  Text(c.when, style: TextStyle(fontSize: 12, color: C.muted)),
                                 ]),
                                 const SizedBox(height: 2),
                                 Text(c.text, style: const TextStyle(fontSize: 14, height: 1.35)),
@@ -354,7 +354,7 @@ void showCreateSheet(BuildContext context) {
               Container(
                 width: 48,
                 height: 48,
-                decoration: BoxDecoration(color: items[i].$4.withValues(alpha: 0.16), borderRadius: BorderRadius.circular(15)),
+                decoration: BoxDecoration(color: items[i].$4.withValues(alpha: 0.16), borderRadius: BorderRadius.circular(16)),
                 child: Icon(items[i].$1, color: items[i].$4),
               ),
               const SizedBox(width: 14),

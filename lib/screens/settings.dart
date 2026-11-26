@@ -9,6 +9,8 @@ import '../models.dart';
 import '../repo.dart';
 import 'package:image_picker/image_picker.dart';
 import 'settings_extra.dart';
+import 'workspaces.dart';
+import 'admin.dart';
 import 'media_profile.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -76,12 +78,12 @@ class SettingsScreen extends StatelessWidget {
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   const Text('Hartley Roofing', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 19, color: Colors.white, letterSpacing: -0.4)),
                   const SizedBox(height: 3),
-                  Text('Home & Trades · demo@viewrec.com', maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12.5, color: Colors.white.withValues(alpha: 0.8), fontWeight: FontWeight.w500)),
+                  Text('Home & Trades · demo@viewrec.com', maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 13, color: Colors.white.withValues(alpha: 0.8), fontWeight: FontWeight.w500)),
                   const SizedBox(height: 10),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.18), borderRadius: BorderRadius.circular(999)),
-                    child: const Text('Pro trial · day 4 of 15', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w800, color: Colors.white)),
+                    child: const Text('Pro trial · day 4 of 15', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: Colors.white)),
                   ),
                 ]),
               ),
@@ -95,7 +97,8 @@ class SettingsScreen extends StatelessWidget {
           child: Column(children: [
             Tile(icon: Icons.storefront_rounded, title: 'Business profile', subtitle: 'Name, category, contact details', onTap: () => _go(context, const BusinessProfileScreen())),
             Tile(icon: Icons.palette_rounded, title: 'Branding & invitations', subtitle: 'Logo, colours, message wording', onTap: () => _go(context, const BrandingScreen())),
-            Tile(icon: Icons.group_rounded, title: 'Team members', subtitle: '2 people', onTap: () => _go(context, const TeamScreen())),
+            Tile(icon: Icons.swap_horizontal_circle_rounded, title: 'Switch business', subtitle: 'Workspaces you belong to', onTap: () => _go(context, const SubPageShell(title: 'Workspaces', child: WorkspacesScreen()))),
+            Tile(icon: Icons.group_rounded, title: 'Team members', subtitle: '2 people', onTap: () => _go(context, const SubPageShell(title: 'Team & access', child: AdminScreen()))),
             Tile(icon: Icons.block_rounded, title: 'Opt-out list', subtitle: '4 people will never be contacted again', divider: false, onTap: () => _go(context, const OptOutsScreen())),
           ]),
         ),
@@ -418,106 +421,6 @@ class _OptOutsScreenState extends State<OptOutsScreen> {
         ),
         const SizedBox(height: 14),
         AppButton('Add a number or email', icon: Icons.add_rounded, style: BtnStyle.ghost, onTap: _add),
-      ]);
-}
-
-class TeamScreen extends StatefulWidget {
-  const TeamScreen({super.key});
-  @override
-  State<TeamScreen> createState() => _TeamScreenState();
-}
-
-class _TeamScreenState extends State<TeamScreen> {
-  // name, email, role
-  final members = <List<String>>[
-    ['Jordan Hartley', 'jordan@hartleyroofing.example', 'Editor'],
-  ];
-  static const roles = ['Admin', 'Editor', 'Viewer'];
-
-  void _invite() {
-    final email = TextEditingController();
-    var role = 'Editor';
-    showSheet(
-      context,
-      StatefulBuilder(
-        builder: (ctx, set) => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const H2('Invite a teammate'),
-          const SizedBox(height: 14),
-          Field('Their email', controller: email, keyboard: TextInputType.emailAddress),
-          const SizedBox(height: 4),
-          Wrap(children: [for (final r in roles) AppChip(r, active: role == r, onTap: () => set(() => role = r))]),
-          const SizedBox(height: 14),
-          AppButton('Send invitation', icon: Icons.send_rounded, onTap: () {
-            final v = email.text.trim();
-            if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(v)) {
-              showMsg(ctx, 'Enter a valid email address');
-              return;
-            }
-            Navigator.pop(ctx);
-            setState(() => members.add([v.split('@').first, v, role]));
-            showMsg(context, 'Invitation sent to $v');
-          }),
-        ]),
-      ),
-    );
-  }
-
-  void _manage(int i) {
-    final m = members[i];
-    showSheet(
-      context,
-      StatefulBuilder(
-        builder: (ctx, set) => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          H2(m[0]),
-          Muted(m[1], size: 13),
-          const SizedBox(height: 14),
-          const Text('Role', style: TextStyle(fontWeight: FontWeight.w700)),
-          const SizedBox(height: 8),
-          Wrap(children: [
-            for (final r in roles)
-              AppChip(r, active: m[2] == r, onTap: () {
-                set(() => m[2] = r);
-                setState(() {});
-              }),
-          ]),
-          const SizedBox(height: 14),
-          AppButton('Remove from team', icon: Icons.person_remove_rounded, style: BtnStyle.danger, onTap: () async {
-            final ok = await showDialog<bool>(
-              context: ctx,
-              builder: (d) => AlertDialog(
-                backgroundColor: C.surface,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
-                title: Text('Remove ${m[0]}?', style: const TextStyle(fontWeight: FontWeight.w800)),
-                content: Text('They lose access to this workspace straight away.', style: TextStyle(color: C.muted)),
-                actions: [
-                  TextButton(onPressed: () => Navigator.pop(d, false), child: Text('Keep', style: TextStyle(color: C.muted, fontWeight: FontWeight.w700))),
-                  TextButton(onPressed: () => Navigator.pop(d, true), child: Text('Remove', style: TextStyle(color: C.rec, fontWeight: FontWeight.w800))),
-                ],
-              ),
-            );
-            if (ok == true && ctx.mounted) {
-              Navigator.pop(ctx);
-              setState(() => members.removeAt(i));
-              showMsg(context, '${m[0]} removed');
-            }
-          }),
-        ]),
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) => SubPage('Team members', children: [
-        AppCard(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-          child: Column(children: [
-            Tile(icon: Icons.person_outline_rounded, title: 'demo (you)', subtitle: 'demo@viewrec.com · Owner', divider: members.isNotEmpty),
-            for (var i = 0; i < members.length; i++)
-              Tile(icon: Icons.person_outline_rounded, title: members[i][0], subtitle: '${members[i][1]} · ${members[i][2]}', divider: i < members.length - 1, onTap: () => _manage(i)),
-          ]),
-        ),
-        const SizedBox(height: 14),
-        AppButton('Invite a teammate', icon: Icons.person_add_alt_rounded, onTap: _invite),
       ]);
 }
 

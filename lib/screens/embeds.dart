@@ -106,7 +106,7 @@ class _BodyState extends State<_Body> {
                   width: double.infinity,
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(color: C.surface2, borderRadius: BorderRadius.circular(14)),
-                  child: Text(list[i].code, style: TextStyle(fontFamily: 'monospace', fontSize: 11.5, color: C.text, height: 1.4)),
+                  child: Text(list[i].code, style: TextStyle(fontFamily: 'monospace', fontSize: 12, color: C.text, height: 1.4)),
                 ),
                 const SizedBox(height: 10),
                 AppButton('Copy code', icon: Icons.copy_rounded, small: true, style: BtnStyle.ghost, onTap: () async {

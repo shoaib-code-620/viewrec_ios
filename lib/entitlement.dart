@@ -101,7 +101,7 @@ class EntitlementBanner extends StatelessWidget {
                 child: Row(children: [
                   Icon(trial ? Icons.hourglass_bottom_rounded : Icons.warning_amber_rounded, size: 20, color: color),
                   const SizedBox(width: 10),
-                  Expanded(child: Text(text, style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: C.text, height: 1.35))),
+                  Expanded(child: Text(text, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: C.text, height: 1.35))),
                   Icon(Icons.chevron_right_rounded, size: 20, color: color),
                 ]),
               ),

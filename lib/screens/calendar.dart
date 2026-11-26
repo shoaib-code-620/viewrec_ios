@@ -3,7 +3,10 @@ import '../async_view.dart';
 import '../motion.dart';
 import '../theme.dart';
 import '../web_data.dart';
+import '../shell.dart';
 import '../widgets.dart';
+import 'automations.dart';
+import 'reminder_sheet.dart';
 
 /// Phonebook calendar: a month of invitations, reminders, automations and group emails, sent and still to go.
 class CalendarScreen extends StatefulWidget {
@@ -15,16 +18,34 @@ class CalendarScreen extends StatefulWidget {
 class _CalendarScreenState extends State<CalendarScreen> {
   late DateTime month = DateTime(DateTime.now().year, DateTime.now().month);
   late DateTime selected = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
+  int version = 0;
 
   static const _names = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
   Color _color(String k) => switch (k) { 'invite' => C.primary, 'reminder' => C.amber, 'bundle' => C.blue, _ => C.green };
   IconData _icon(String k) => switch (k) { 'invite' => Icons.send_rounded, 'reminder' => Icons.notifications_active_rounded, 'bundle' => Icons.groups_rounded, _ => Icons.bolt_rounded };
+  Future<void> _setReminder() async {
+    final today = DateTime.now();
+    final isToday = selected.year == today.year && selected.month == today.month && selected.day == today.day;
+    final saved = await showReminderSheet(context, date: isToday ? selected.add(const Duration(days: 1)) : selected);
+    if (saved && mounted) setState(() => version++);
+  }
+
+  /// Group emails are scheduled on the Automations page, as on the website.
+  void _toAutomations(BuildContext context) {
+    final shell = context.findAncestorStateOfType<ShellState>();
+    if (shell != null) {
+      shell.goTo(5);
+    } else {
+      Navigator.of(context).push(MaterialPageRoute(builder: (_) => const Scaffold(body: AutomationsScreen())));
+    }
+  }
+
   bool _same(DateTime a, DateTime b) => a.year == b.year && a.month == b.month && a.day == b.day;
 
   @override
   Widget build(BuildContext context) => AsyncView<List<CalendarEvent>>(
-        key: ValueKey(month),
+        key: ValueKey((month, version)),
         load: () => webRepo.calendarEvents(month),
         skeletonCards: 3,
         builder: (context, events, refresh) {
@@ -44,7 +65,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 ]),
                 const SizedBox(height: 6),
                 Row(children: [
-                  for (final d in const ['M', 'T', 'W', 'T', 'F', 'S', 'S']) Expanded(child: Center(child: Text(d, style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w800, color: C.muted)))),
+                  for (final d in const ['M', 'T', 'W', 'T', 'F', 'S', 'S']) Expanded(child: Center(child: Text(d, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: C.muted)))),
                 ]),
                 const SizedBox(height: 6),
                 for (var r = 0; r < rows; r++)
@@ -93,6 +114,12 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   Text(k.$2, style: TextStyle(fontSize: 12, color: C.muted, fontWeight: FontWeight.w600)),
                 ]),
             ]),
+            const SizedBox(height: 14),
+            Row(children: [
+              Expanded(child: AppButton('Set reminder', icon: Icons.notifications_active_rounded, small: true, onTap: _setReminder)),
+              const SizedBox(width: 8),
+              Expanded(child: AppButton('Email a group', icon: Icons.mail_outline_rounded, small: true, style: BtnStyle.ghost, onTap: () => _toAutomations(context))),
+            ]),
             SectionHeader(_same(selected, DateTime.now()) ? 'Today' : '${selected.day} ${_names[selected.month - 1]}'),
             AnimatedSwitcher(
               duration: kMed,
@@ -108,7 +135,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                         const SizedBox(width: 12),
                         Expanded(
                           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                            Text(e.title, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14.5)),
+                            Text(e.title, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
                             Muted(e.who, size: 12.5),
                           ]),
                         ),

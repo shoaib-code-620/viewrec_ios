@@ -137,7 +137,7 @@ class _LeadsBodyState extends State<_LeadsBody> {
                   ),
                 ]),
                 const SizedBox(height: 10),
-                Text(l.message, maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(color: C.muted, fontSize: 13.5, height: 1.4)),
+                Text(l.message, maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(color: C.muted, fontSize: 14, height: 1.4)),
                 const SizedBox(height: 8),
                 Row(children: [Icon(Icons.north_east_rounded, size: 13, color: C.primary), const SizedBox(width: 4), Text('via ${l.source}', style: TextStyle(fontSize: 12, color: C.primary))]),
               ]),
@@ -164,7 +164,7 @@ class _LeadsBodyState extends State<_LeadsBody> {
           onDrop: (l, id) {
             _setStatus(l, id);
             if (id == 'won') {
-              showSuccess(context, 'Won! ${l.name}');
+              showSuccess(context, 'Marked as won: ${l.name}');
             } else {
               showMsg(context, '${l.name} marked as $id');
             }

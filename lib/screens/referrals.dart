@@ -31,7 +31,7 @@ class ReferralHubScreen extends StatelessWidget {
                 const SizedBox(height: 4),
                 CountUp(r.creditCents / 100, decimals: 2, prefix: '\$', style: const TextStyle(fontSize: 38, fontWeight: FontWeight.w800, letterSpacing: -1)),
                 const SizedBox(height: 4),
-                Text('Credit comes off your next bill, like money.', style: TextStyle(color: C.heroSub, fontSize: 12.5)),
+                Text('Credit comes off your next bill, like money.', style: TextStyle(color: C.heroSub, fontSize: 13)),
               ]),
             ).reveal(context, 0),
             const SizedBox(height: 14),
@@ -76,13 +76,13 @@ class ReferralHubScreen extends StatelessWidget {
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Text(r.referred[i].name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14.5)),
+                        Text(r.referred[i].name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
                         Muted(r.referred[i].when, size: 12),
                       ]),
                     ),
                     Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
                       Text(r.referred[i].status == 'paid' ? 'Paid' : 'Signed up', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 12, color: r.referred[i].status == 'paid' ? C.green : C.amber)),
-                      Text(r.referred[i].creditCents > 0 ? '+${_money(r.referred[i].creditCents)}' : 'Waiting', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: C.muted)),
+                      Text(r.referred[i].creditCents > 0 ? '+${_money(r.referred[i].creditCents)}' : 'Waiting', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: C.muted)),
                     ]),
                   ]),
                 ),

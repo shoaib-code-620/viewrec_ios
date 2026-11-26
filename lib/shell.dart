@@ -6,17 +6,17 @@ import 'package:flutter/services.dart';
 import './icons.dart';
 import 'liquid_bar.dart';
 import 'motion.dart';
+import 'order_store.dart';
 import 'theme.dart';
 import 'theme_controller.dart';
 import 'widgets.dart';
 import 'screens/overview.dart';
+import 'screens/search.dart';
 import 'screens/testimonials.dart';
 import 'screens/create_content.dart';
-import 'screens/phonebook.dart';
+import 'screens/section_tabs.dart';
 import 'screens/leads.dart';
-import 'screens/automations.dart';
 import 'screens/your_pages.dart';
-import 'screens/publishing.dart';
 import 'screens/connected_accounts.dart';
 import 'screens/billing.dart';
 import 'screens/settings.dart';
@@ -31,14 +31,11 @@ import 'screens/inbox.dart';
 import 'screens/media.dart';
 import 'screens/media_widgets.dart';
 import 'screens/gallery.dart';
-import 'screens/bundles.dart';
-import 'screens/calendar.dart';
 import 'screens/templates.dart';
 import 'screens/verification.dart';
 import 'screens/review_requests.dart';
 import 'screens/referrals.dart';
 import 'screens/video_settings.dart';
-import 'screens/embeds.dart';
 import 'screens/support_chat.dart';
 import 'screens/security.dart';
 import 'screens/marketing_email.dart';
@@ -94,12 +91,12 @@ class ShellState extends State<Shell> {
   late final List<Section> sections = [
     Section('Overview', 'Your proof at a glance', PIconsRegular.house, PIconsFill.house, C.primary, (s) => OverviewScreen(shell: s)),
     Section('Testimonials', 'Videos and reviews from customers', PIconsRegular.quotes, PIconsFill.quotes, const Color(0xFFFF8A80), (s) => const TestimonialsScreen()),
-    Section('Create content', 'Turn reviews into posts', PIconsRegular.magicWand, PIconsFill.magicWand, const Color(0xFF1FC9A4), (s) => const CreateContentScreen()),
-    Section('Business Phonebook', 'Customers to ask', PIconsRegular.addressBook, PIconsFill.addressBook, const Color(0xFF3E94F5), (s) => const PhonebookScreen()),
+    Section('Create your posting', 'Turn reviews into posts', PIconsRegular.magicWand, PIconsFill.magicWand, const Color(0xFF1FC9A4), (s) => const CreateContentScreen()),
+    Section('Business Phonebook', 'Customers to ask', PIconsRegular.addressBook, PIconsFill.addressBook, const Color(0xFF3E94F5), (s) => const PhonebookTabs()),
     Section('Leads and Requests', 'People asking for your work', PIconsRegular.handshake, PIconsFill.handshake, const Color(0xFFFFC21A), (s) => const LeadsScreen()),
-    Section('Automations', 'Ask at the right moment', PIconsRegular.lightning, PIconsFill.lightning, const Color(0xFFF2A100), (s) => const AutomationsScreen()),
+    Section('Automations', 'Ask at the right moment', PIconsRegular.lightning, PIconsFill.lightning, const Color(0xFFF2A100), (s) => const AutomationsTabs()),
     Section('Your pages', 'Review page, listing, website', PIconsRegular.browsers, PIconsFill.browsers, const Color(0xFF1FC9A4), (s) => const YourPagesScreen()),
-    Section('Publishing', 'Posts and schedule', PIconsRegular.rocketLaunch, PIconsFill.rocketLaunch, const Color(0xFF0B5FC4), (s) => const PublishingScreen()),
+    Section('Publishing', 'Posts and schedule', PIconsRegular.rocketLaunch, PIconsFill.rocketLaunch, const Color(0xFF0B5FC4), (s) => const PublishingTabs()),
     Section('Connected accounts', 'Google, Facebook and more', PIconsRegular.shareNetwork, PIconsFill.shareNetwork, const Color(0xFF3E94F5), (s) => const ConnectedAccountsScreen()),
     Section('Plan & billing', 'Your plan and invoices', PIconsRegular.creditCard, PIconsFill.creditCard, const Color(0xFF0FA386), (s) => const BillingScreen()),
     Section('Settings', 'Profile, branding, privacy', PIconsRegular.gear, PIconsFill.gear, const Color(0xFF8A9BB8), (s) => const SettingsScreen()),
@@ -108,15 +105,15 @@ class ShellState extends State<Shell> {
     Section('More', 'Everything else', PIconsRegular.dotsNine, PIconsFill.dotsNine, C.primary, (s) => _MoreGrid(shell: s)),
     Section('Media', 'Stories and reels', PIconsRegular.playCircle, PIconsFill.playCircle, const Color(0xFFFF6B5E), (s) => const MediaScreen()),
     Section('Gallery', 'Your videos, pictures and documents', Icons.photo_library_outlined, Icons.photo_library_rounded, const Color(0xFF3E94F5), (s) => const GalleryScreen()),
-    Section('Contact bundles', 'Email a group of customers', Icons.groups_outlined, Icons.groups_rounded, const Color(0xFF0B5FC4), (s) => const BundlesScreen()),
-    Section('Calendar', 'What is going out and when', Icons.calendar_month_outlined, Icons.calendar_month_rounded, const Color(0xFF0FA386), (s) => const CalendarScreen()),
+    Section('Contact bundles', 'Email a group of customers', Icons.groups_outlined, Icons.groups_rounded, const Color(0xFF0B5FC4), (s) => const PhonebookTabs(initial: 2)),
+    Section('Calendar', 'What is going out and when', Icons.calendar_month_outlined, Icons.calendar_month_rounded, const Color(0xFF0FA386), (s) => const PhonebookTabs(initial: 3)),
     Section('Review templates', 'Questions customers answer', Icons.quiz_outlined, Icons.quiz_rounded, const Color(0xFFF2A100), (s) => const TemplatesScreen()),
     Section('Verification', 'Get your blue tick', Icons.verified_outlined, Icons.verified_rounded, const Color(0xFF3E94F5), (s) => const VerificationScreen()),
     Section('Review requests', 'People asking to review you', Icons.how_to_reg_outlined, Icons.how_to_reg_rounded, const Color(0xFFFF8A80), (s) => const ReviewRequestsScreen()),
     Section('Referrals', 'Earn credit for new businesses', Icons.card_giftcard_outlined, Icons.card_giftcard_rounded, const Color(0xFFFF6B5E), (s) => const ReferralHubScreen()),
     Section('Video settings', 'Subtitles and watermark', Icons.closed_caption_outlined, Icons.closed_caption_rounded, const Color(0xFF8A9BB8), (s) => const VideoSettingsScreen()),
-    Section('Embeds', 'Show reviews on your website', Icons.code_outlined, Icons.code_rounded, const Color(0xFF1FC9A4), (s) => const EmbedsScreen()),
-    Section('Support', 'Chat with the ViewRec team', Icons.support_agent_outlined, Icons.support_agent_rounded, const Color(0xFF1FC9A4), (s) => const SupportChatScreen()),
+    Section('Embeds', 'Show reviews on your website', Icons.code_outlined, Icons.code_rounded, const Color(0xFF1FC9A4), (s) => const PublishingTabs(initial: 2)),
+    Section('Support', 'Chat with the ViewRec team', Icons.support_agent_outlined, Icons.support_agent_rounded, const Color(0xFF1FC9A4), (s) => const SupportChatScreen(avoidTabBar: true)),
     Section('Security', 'Two-step sign-in and devices', Icons.shield_outlined, Icons.shield_rounded, const Color(0xFFE4513F), (s) => const SecurityScreen()),
     Section('Marketing email', 'Write to your customers', Icons.campaign_outlined, Icons.campaign_rounded, const Color(0xFFFFC21A), (s) => const MarketingEmailScreen()),
     Section('Workspaces', 'Switch between businesses', Icons.swap_horizontal_circle_outlined, Icons.swap_horizontal_circle_rounded, const Color(0xFF3E94F5), (s) => const WorkspacesScreen()),
@@ -224,7 +221,7 @@ class ShellState extends State<Shell> {
                 child: AnimatedSwitcher(
                   duration: const Duration(milliseconds: 380),
                   transitionBuilder: (c, a) => ScaleTransition(scale: CurvedAnimation(parent: a, curve: Curves.elasticOut), child: FadeTransition(opacity: a, child: c)),
-                  child: Text('$badge', key: ValueKey(badge), style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: Colors.white)),
+                  child: Text('$badge', key: ValueKey(badge), style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Colors.white)),
                 ),
               ),
             ),
@@ -265,6 +262,8 @@ class ShellState extends State<Shell> {
             ),
           ]),
         ),
+        const SizedBox(width: 10),
+        _round(Icon(Icons.search_rounded, size: 21, color: C.text), () => push(SearchScreen(shell: this))),
         const SizedBox(width: 10),
         _round(
           reduceMotion(context)
@@ -309,7 +308,7 @@ class ShellState extends State<Shell> {
           const SizedBox(height: 2),
           AnimatedDefaultTextStyle(
             duration: const Duration(milliseconds: 500),
-            style: TextStyle(fontFamily: 'PlusJakartaSans', fontSize: 10.5, fontWeight: sel ? FontWeight.w800 : FontWeight.w600, color: sel ? C.primary : C.muted),
+            style: TextStyle(fontFamily: 'PlusJakartaSans', fontSize: 11, fontWeight: sel ? FontWeight.w800 : FontWeight.w600, color: sel ? C.primary : C.muted),
             child: Text(label),
           ),
         ]),
@@ -364,7 +363,7 @@ class ShellState extends State<Shell> {
       (PIconsRegular.videoCamera, 'Preview recording', C.rec, () => closeThen(() => push(const RecordScreen()))),
       (PIconsRegular.magicWand, 'Create a post', const Color(0xFF1FC9A4), () => closeThen(() => goTo(2))),
       (PIconsRegular.userPlus, 'Add a contact', const Color(0xFF1FC9A4), () => closeThen(() => goTo(3))),
-      (PIconsRegular.sparkle, 'Ask assistant', const Color(0xFFF2A100), () => closeThen(() => push(const AssistantScreen()))),
+      (Icons.chat_bubble_outline_rounded, 'Ask assistant', const Color(0xFFF2A100), () => closeThen(() => push(const AssistantScreen()))),
     ];
     showSheet(
       context,
@@ -387,7 +386,7 @@ class ShellState extends State<Shell> {
                 child: Column(mainAxisAlignment: MainAxisAlignment.start, children: [
                   GlossIcon(actions[i].$1, actions[i].$3, size: 62),
                   const SizedBox(height: 8),
-                  Text(actions[i].$2, textAlign: TextAlign.center, maxLines: 2, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, height: 1.2)),
+                  Text(actions[i].$2, textAlign: TextAlign.center, maxLines: 2, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, height: 1.2)),
                 ]).reveal(context, i, 0.12),
               ),
           ],
@@ -399,19 +398,47 @@ class ShellState extends State<Shell> {
 }
 
 /// The "More" page: every section that isn't a main tab, as a grid of tiles.
-class _MoreGrid extends StatelessWidget {
+class _MoreGrid extends StatefulWidget {
   final ShellState shell;
   const _MoreGrid({required this.shell});
+  @override
+  State<_MoreGrid> createState() => _MoreGridState();
+}
+
+class _MoreGridState extends State<_MoreGrid> {
+  ShellState get shell => widget.shell;
+
+  // The first group follows the website's menu, in the same order. The second holds what only the app has.
+  // Groups, Calendar, Email a group and Embeds live inside Business Phonebook and Publishing, as on the website.
+  static const _defaults = <(String, String, List<int>)>[
+    ('menu', 'Menu', [2, 15, 3, 4, 5, 6, 7, 8, 9, 10, 12, 11]),
+    ('extras', 'Only in the app', [18, 20, 22, 24]),
+  ];
+  late final Map<String, List<int>> orders = {for (final g in _defaults) g.$1: List.of(g.$3)};
+
+  @override
+  void initState() {
+    super.initState();
+    for (final g in _defaults) {
+      OrderStore.load('more_${g.$1}').then((saved) {
+        if (saved != null && mounted) setState(() => orders[g.$1] = [for (final s in applyOrder([for (final i in g.$3) '$i'], saved, (s) => s)) int.parse(s)]);
+      });
+    }
+  }
+
+  void _move(String group, String from, String to) {
+    final ids = movedBefore([for (final i in orders[group]!) '$i'], from, to);
+    setState(() => orders[group] = [for (final s in ids) int.parse(s)]);
+    OrderStore.save('more_$group', ids);
+  }
+
+  void _reset(String group) {
+    setState(() => orders[group] = List.of(_defaults.firstWhere((g) => g.$1 == group).$3));
+    OrderStore.clear('more_$group');
+  }
 
   @override
   Widget build(BuildContext context) {
-    // (section index) groups
-    const groups = <(String, List<int>)>[
-      ('Grow', [2, 6, 7, 8, 23, 21]),
-      ('Customers', [3, 4, 5, 16, 17, 26, 20]),
-      ('Content', [15, 18, 22, 19]),
-      ('Account', [9, 10, 12, 11, 25, 27, 24]),
-    ];
     var n = 0;
     return AppPage(reveal: false, children: [
       AppCard(
@@ -426,7 +453,7 @@ class _MoreGrid extends StatelessWidget {
             const SizedBox(width: 14),
             const Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text('Appearance', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15.5)),
+                Text('Appearance', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
                 SizedBox(height: 2),
                 Muted('Light, dark, or follow your phone', size: 12.5),
               ]),
@@ -437,10 +464,19 @@ class _MoreGrid extends StatelessWidget {
         ]),
       ).reveal(context, n++, 0.05),
       const SizedBox(height: 8),
-      for (final g in groups) ...[
+      for (final g in _defaults) ...[
         Padding(
           padding: const EdgeInsets.only(top: 6, bottom: 12),
-          child: Text(g.$1.toUpperCase(), style: TextStyle(fontSize: 11.5, letterSpacing: 1.4, fontWeight: FontWeight.w800, color: C.muted)),
+          child: Row(children: [
+            Expanded(child: Text(g.$2.toUpperCase(), style: TextStyle(fontSize: 12, letterSpacing: 1.4, fontWeight: FontWeight.w800, color: C.muted))),
+            if (orders[g.$1]!.join(',') != g.$3.join(','))
+              GestureDetector(
+                onTap: () => _reset(g.$1),
+                child: Text('Reset order', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: C.primary)),
+              )
+            else
+              Text('Press and hold to move', style: TextStyle(fontSize: 12, color: C.muted)),
+          ]),
         ).reveal(context, n++, 0.05),
         GridView.count(
           crossAxisCount: 2,
@@ -450,8 +486,15 @@ class _MoreGrid extends StatelessWidget {
           crossAxisSpacing: 12,
           childAspectRatio: MediaQuery.textScalerOf(context).scale(1) > 1.15 ? 0.9 : 1.02,
           children: [
-            for (final i in g.$2)
-              _tile(context, shell.sections[i], () => shell.goTo(i)).reveal(context, n++, 0.1),
+            for (final i in orders[g.$1]!)
+              ReorderItem(
+                key: ValueKey('more_$i'),
+                group: g.$1,
+                id: '$i',
+                radius: rLg,
+                onMove: (from, to) => _move(g.$1, from, to),
+                child: _tile(context, shell.sections[i], () => i == 24 ? shell.push(const SupportScreen()) : shell.goTo(i)),
+              ),
           ],
         ),
         const SizedBox(height: 14),
@@ -460,7 +503,7 @@ class _MoreGrid extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
         child: Column(children: [
           Tile(icon: PIconsRegular.question, title: 'Help & FAQs', onTap: () => shell.push(const HelpScreen())),
-          Tile(icon: PIconsRegular.sparkle, title: 'Ask the assistant', onTap: () => shell.push(const AssistantScreen())),
+          Tile(icon: Icons.chat_bubble_outline_rounded, title: 'Ask the assistant', onTap: () => shell.push(const AssistantScreen())),
           Tile(
             icon: PIconsRegular.signOut,
             iconColor: C.rec,
@@ -484,16 +527,16 @@ class _MoreGrid extends StatelessWidget {
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(15),
+                borderRadius: BorderRadius.circular(16),
                 gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [s.color.withValues(alpha: 0.95), s.color.withValues(alpha: 0.65)]),
                 boxShadow: [BoxShadow(color: s.color.withValues(alpha: 0.32), blurRadius: 14, offset: const Offset(0, 6))],
               ),
               child: Icon(s.iconFill, color: Colors.white, size: 22),
             ),
             const Spacer(),
-            Text(s.title, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14.5, height: 1.2)),
+            Text(s.title, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15, height: 1.2)),
             const SizedBox(height: 3),
-            Text(s.blurb, maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 11.5, color: C.muted, fontWeight: FontWeight.w500)),
+            Text(s.blurb, maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: C.muted, fontWeight: FontWeight.w500)),
           ]),
         ),
       );
@@ -533,7 +576,7 @@ void showVideoLinkSheet(BuildContext context) {
         Expanded(child: AppButton('WhatsApp', icon: PIconsRegular.whatsappLogo, style: BtnStyle.ghost, small: true, onTap: () => Navigator.pop(context))),
       ]),
       const SizedBox(height: 8),
-      AppButton('Send custom invitation', icon: PIconsRegular.sparkle, onTap: () {
+      AppButton('Send custom invitation', icon: PIconsRegular.paperPlaneTilt, onTap: () {
         Navigator.pop(context);
         Navigator.of(context).push(MaterialPageRoute(builder: (_) => const InviteComposerScreen()));
       }),

@@ -383,7 +383,7 @@ class _RecordScreenState extends State<RecordScreen> {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                         decoration: BoxDecoration(color: C.primarySoft, borderRadius: BorderRadius.circular(999)),
-                        child: Text(badge, style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: C.accentText)),
+                        child: Text(badge, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: C.accentText)),
                       ),
                     ],
                   ]),
@@ -428,8 +428,8 @@ class _RecordScreenState extends State<RecordScreen> {
         const SizedBox(height: 18),
         Field('Your testimonial', controller: written, lines: 6, hint: 'They turned up when they said they would…', onChanged: (_) => setState(() {})),
         Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-          Text(len < 20 ? 'A little more, please (${20 - len} to go)' : 'Looks good', style: TextStyle(fontSize: 12.5, color: len < 20 ? C.muted : C.green)),
-          Text('$len', style: TextStyle(fontSize: 12.5, color: C.muted)),
+          Text(len < 20 ? 'A little more, please (${20 - len} to go)' : 'Looks good', style: TextStyle(fontSize: 13, color: len < 20 ? C.muted : C.green)),
+          Text('$len', style: TextStyle(fontSize: 13, color: C.muted)),
         ]),
         const SizedBox(height: 14),
         Text('Need a starting point?', style: TextStyle(color: C.muted, fontSize: 13, fontWeight: FontWeight.w600)),
@@ -437,7 +437,7 @@ class _RecordScreenState extends State<RecordScreen> {
         Wrap(spacing: 8, runSpacing: 8, children: [
           for (final line in script)
             ActionChip(
-              label: Text(line, style: const TextStyle(fontSize: 12.5)),
+              label: Text(line, style: const TextStyle(fontSize: 13)),
               backgroundColor: C.surface,
               side: BorderSide(color: C.border),
               onPressed: () => setState(() => written.text = written.text.isEmpty ? line : '${written.text} $line'),
@@ -480,7 +480,7 @@ class _RecordScreenState extends State<RecordScreen> {
                     child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
                       CircleAvatar(radius: 28, backgroundColor: a.color.withValues(alpha: 0.18), child: Icon(a.icon, size: 28, color: a.color)),
                       const SizedBox(height: 8),
-                      Text(a.name, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5)),
+                      Text(a.name, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
                     ]),
                   ),
                 ),
@@ -504,7 +504,7 @@ class _RecordScreenState extends State<RecordScreen> {
             child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
               CircleAvatar(radius: 38, backgroundColor: C.green, child: Icon(Icons.check_rounded, size: 38, color: Colors.white)),
               const SizedBox(height: 24),
-              const Text('Thank you!', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800)),
+              const Text('Thank you', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800)),
               const SizedBox(height: 8),
               Row(mainAxisAlignment: MainAxisAlignment.center, children: [Stars(rating == 0 ? 5 : rating)]),
               const SizedBox(height: 12),

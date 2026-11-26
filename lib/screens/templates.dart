@@ -39,11 +39,20 @@ class _TemplatesBodyState extends State<_TemplatesBody> {
           const SizedBox(height: 8),
           ConstrainedBox(
             constraints: BoxConstraints(maxHeight: MediaQuery.of(ctx).size.height * 0.34),
-            child: ListView(shrinkWrap: true, children: [
+            child: ReorderableListView(
+              shrinkWrap: true,
+              buildDefaultDragHandles: false,
+              onReorder: (o, n) => set(() {
+                if (n > o) n--;
+                qs.insert(n, qs.removeAt(o));
+              }),
+              children: [
               for (var i = 0; i < qs.length; i++)
                 Padding(
+                  key: ObjectKey(qs[i]),
                   padding: const EdgeInsets.only(bottom: 10),
                   child: Row(children: [
+                    ReorderableDragStartListener(index: i, child: Padding(padding: const EdgeInsets.only(right: 6), child: Icon(Icons.drag_indicator_rounded, size: 20, color: C.muted))),
                     Container(width: 26, height: 26, alignment: Alignment.center, decoration: BoxDecoration(color: C.primarySoft, shape: BoxShape.circle), child: Text('${i + 1}', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 12, color: C.primary))),
                     const SizedBox(width: 10),
                     Expanded(
@@ -128,7 +137,7 @@ class _TemplatesBodyState extends State<_TemplatesBody> {
                 for (var q = 0; q < list[i].questions.length; q++)
                   Padding(
                     padding: const EdgeInsets.only(bottom: 4),
-                    child: Text('${q + 1}. ${list[i].questions[q]}', style: TextStyle(color: C.muted, fontSize: 13.5, height: 1.35)),
+                    child: Text('${q + 1}. ${list[i].questions[q]}', style: TextStyle(color: C.muted, fontSize: 14, height: 1.35)),
                   ),
                 const SizedBox(height: 10),
                 Row(children: [

@@ -626,7 +626,7 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> {
             Positioned(
               left: 5,
               bottom: 3,
-              child: Text('${_t(c.outMs)}${c.speed != 1 ? '  ${c.speed}x' : ''}${c.reverse ? '  <<' : ''}', style: const TextStyle(color: Colors.white, fontSize: 10.5, fontWeight: FontWeight.w800, shadows: [Shadow(blurRadius: 4, color: Colors.black87)])),
+              child: Text('${_t(c.outMs)}${c.speed != 1 ? '  ${c.speed}x' : ''}${c.reverse ? '  <<' : ''}', style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w800, shadows: [Shadow(blurRadius: 4, color: Colors.black87)])),
             ),
           ]),
         ),
@@ -696,11 +696,11 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> {
                   height: 28,
                   margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
                   padding: const EdgeInsets.symmetric(horizontal: 10),
-                  decoration: BoxDecoration(gradient: const LinearGradient(colors: [Color(0xFF3E94F5), Color(0xFF1FC9A4)]), borderRadius: BorderRadius.circular(9)),
+                  decoration: BoxDecoration(gradient: const LinearGradient(colors: [Color(0xFF3E94F5), Color(0xFF1FC9A4)]), borderRadius: BorderRadius.circular(8)),
                   child: Row(children: [
                     MusicBars(active: playing, height: 13),
                     const SizedBox(width: 8),
-                    Expanded(child: Text(music!.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontSize: 11.5, fontWeight: FontWeight.w700))),
+                    Expanded(child: Text(music!.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w700))),
                   ]),
                 ),
               ),
@@ -765,7 +765,7 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> {
                     height: 68,
                     padding: const EdgeInsets.all(2),
                     decoration: BoxDecoration(borderRadius: BorderRadius.circular(12), border: Border.all(color: filter == i ? C.primary : Colors.transparent, width: 2)),
-                    child: ClipRRect(borderRadius: BorderRadius.circular(9), child: f == null ? thumb : ColorFiltered(colorFilter: f, child: thumb)),
+                    child: ClipRRect(borderRadius: BorderRadius.circular(8), child: f == null ? thumb : ColorFiltered(colorFilter: f, child: thumb)),
                   ),
                   const SizedBox(height: 4),
                   Text(kFilterNames[i], style: TextStyle(color: filter == i ? Colors.white : Colors.white54, fontSize: 11, fontWeight: FontWeight.w700)),
@@ -776,7 +776,7 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> {
         );
       case 'adjust':
         Widget row(String label, double v, ValueChanged<double> on) => Row(children: [
-              SizedBox(width: 84, child: Text(label, style: const TextStyle(color: Colors.white70, fontSize: 12.5, fontWeight: FontWeight.w700))),
+              SizedBox(width: 84, child: Text(label, style: const TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w700))),
               Expanded(child: Slider(value: v, min: -1, max: 1, activeColor: C.primary, onChanged: (x) => setState(() => on(x)))),
               SizedBox(width: 36, child: Text('${(v * 100).round()}', textAlign: TextAlign.end, style: const TextStyle(color: Colors.white54, fontSize: 12))),
             ]);
@@ -819,12 +819,12 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> {
       Row(children: [
         const Icon(Icons.music_note_rounded, color: Color(0xFF1FC9A4), size: 20),
         const SizedBox(width: 8),
-        Expanded(child: Text(m.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13.5))),
+        Expanded(child: Text(m.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 14))),
         TextButton(onPressed: _pickMusic, child: const Text('Change')),
         IconButton(onPressed: _removeMusic, icon: const Icon(Icons.delete_outline_rounded, color: Colors.white70, size: 20), visualDensity: VisualDensity.compact),
       ]),
       Row(children: [
-        const SizedBox(width: 56, child: Text('Volume', style: TextStyle(color: Colors.white70, fontSize: 12.5, fontWeight: FontWeight.w700))),
+        const SizedBox(width: 56, child: Text('Volume', style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w700))),
         Expanded(
           child: Slider(
             value: m.volume,
@@ -840,7 +840,7 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> {
         ),
         SizedBox(width: 44, child: Text('${(m.volume * 100).round()}%', textAlign: TextAlign.end, style: const TextStyle(color: Colors.white54, fontSize: 12))),
       ]),
-      const Align(alignment: Alignment.centerLeft, child: Text('Part of the song to use', style: TextStyle(color: Colors.white70, fontSize: 12.5, fontWeight: FontWeight.w700))),
+      const Align(alignment: Alignment.centerLeft, child: Text('Part of the song to use', style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w700))),
       RangeSlider(
         values: RangeValues(m.startMs.toDouble(), m.endMs.toDouble()),
         min: 0,
@@ -857,7 +857,7 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> {
       ),
       Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
         Text('From ${_t(m.startMs)}', style: const TextStyle(color: Colors.white54, fontSize: 12)),
-        Text('Length ${_t(m.endMs - m.startMs)}', style: const TextStyle(color: Colors.white, fontSize: 12.5, fontWeight: FontWeight.w800)),
+        Text('Length ${_t(m.endMs - m.startMs)}', style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w800)),
         Text('To ${_t(m.endMs)}', style: const TextStyle(color: Colors.white54, fontSize: 12)),
       ]),
       const SizedBox(height: 10),
@@ -869,7 +869,7 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> {
     ]);
   }
 
-  Widget _hint(String s) => Text(s, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white54, fontSize: 12.5, height: 1.4));
+  Widget _hint(String s) => Text(s, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white54, fontSize: 13, height: 1.4));
 
   Widget _chip(String label, bool on, VoidCallback onTap) => GestureDetector(
         onTap: () {
@@ -930,7 +930,7 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> {
         const SizedBox(height: 8),
         Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
           Text('Start ${_t(c.start)}', style: const TextStyle(color: Colors.white54, fontSize: 12)),
-          Text('Length ${_t(c.end - c.start)}', style: const TextStyle(color: Colors.white, fontSize: 12.5, fontWeight: FontWeight.w800)),
+          Text('Length ${_t(c.end - c.start)}', style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w800)),
           Text('End ${_t(c.end)}', style: const TextStyle(color: Colors.white54, fontSize: 12)),
         ]),
       ]);

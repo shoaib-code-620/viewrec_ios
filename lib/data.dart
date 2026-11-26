@@ -6,8 +6,13 @@ class Customer {
   /// Mobile number, if known. Needed to call them.
   String phone;
   String status; // suggested | approved | invited | recorded | skipped
+  /// When the invitation went out (for example '29 Oct') and how many reminders followed it.
+  String sentOn;
+  int nudges;
   Customer({
     this.phone = '',
+    this.sentOn = '',
+    this.nudges = 0,
     required this.id,
     required this.name,
     required this.job,
@@ -24,6 +29,8 @@ class Customer {
         reason: j['reason'] ?? '',
         status: j['status'] ?? 'suggested',
         phone: j['phone'] ?? '',
+        sentOn: j['sentOn'] ?? '',
+        nudges: j['nudges'] ?? 0,
       );
 }
 
@@ -35,6 +42,15 @@ class Video {
   List<String> platforms;
   final int rating;
   final bool written; // written testimonial vs video
+  /// Where the customer agreed it can be used: Website, Social media, Marketing.
+  final List<String> consent;
+  final String template, submitted;
+  /// How the recording was captured. [captureNotes] are things worth a look, never a reason to reject it.
+  final bool captureVerified;
+  final List<String> captureSignals, captureNotes;
+  /// What was said (the customer's words, which you can correct) and what the AI found in it.
+  String transcript;
+  final String aiSummary;
   Video({
     required this.id,
     required this.name,
@@ -47,7 +63,16 @@ class Video {
     required this.platforms,
     this.rating = 5,
     this.written = false,
-  });
+    List<String>? consent,
+    this.template = 'Friendly',
+    this.submitted = '',
+    this.captureVerified = true,
+    this.captureSignals = const [],
+    this.captureNotes = const [],
+    String? transcript,
+    this.aiSummary = '',
+  })  : consent = consent ?? const ['Website', 'Social media', 'Marketing'],
+        transcript = transcript ?? quote;
 
   factory Video.fromJson(Map<String, dynamic> j) => Video(
         id: '${j['id']}',
@@ -61,6 +86,14 @@ class Video {
         platforms: List<String>.from(j['platforms'] ?? const []),
         rating: (j['rating'] ?? 5) as int,
         written: j['written'] == true,
+        consent: j['consent'] == null ? null : List<String>.from(j['consent']),
+        template: j['template'] ?? 'Friendly',
+        submitted: j['submitted'] ?? '',
+        captureVerified: j['captureVerified'] != false,
+        captureSignals: List<String>.from(j['captureSignals'] ?? const []),
+        captureNotes: List<String>.from(j['captureNotes'] ?? const []),
+        transcript: j['transcript'],
+        aiSummary: j['aiSummary'] ?? '',
       );
 }
 
@@ -70,15 +103,20 @@ List<Customer> demoCustomers() => [
       Customer(id: '1', phone: '+44 7700 900137', name: 'Sarah Mitchell', job: 'Roof replacement', date: '12 days ago', reason: 'Recent job, replied to your last email', status: 'suggested'),
       Customer(id: '2', phone: '+44 7700 900274', name: 'Daniel Okafor', job: 'Gutter repair', date: '3 weeks ago', reason: 'Left a 5-star Google review', status: 'suggested'),
       Customer(id: '3', phone: '+44 7700 900411', name: 'Priya Nair', job: 'Full re-roof', date: '1 month ago', reason: 'Repeat customer', status: 'approved'),
-      Customer(id: '4', phone: '+44 7700 900548', name: 'Tom Hendricks', job: 'Chimney flashing', date: '5 weeks ago', reason: 'Recent job', status: 'invited'),
-      Customer(id: '5', phone: '+44 7700 900685', name: 'Lena Fischer', job: 'Skylight install', date: '6 weeks ago', reason: 'Referred two neighbours', status: 'recorded'),
+      Customer(id: '4', phone: '+44 7700 900548', name: 'Tom Hendricks', job: 'Chimney flashing', date: '5 weeks ago', reason: 'Recent job', status: 'invited', sentOn: '29 Oct', nudges: 2),
+      Customer(id: '5', phone: '+44 7700 900685', name: 'Lena Fischer', job: 'Skylight install', date: '6 weeks ago', reason: 'Referred two neighbours', status: 'recorded', sentOn: '14 Oct'),
       Customer(id: '6', phone: '+44 7700 900822', name: 'Marcus Webb', job: 'Storm damage repair', date: '2 months ago', reason: 'Job went badly - dispute open', status: 'skipped'),
     ];
 
 List<Video> demoVideos() => [
       Video(id: 'v1', name: 'Lena Fischer', job: 'Skylight install', duration: '1:48', quote: 'They turned up when they said they would, cleaned up after themselves, and the roof has been perfect since.', status: 'pending', views: 0, hue: const Color(0xFF0A2E66), platforms: []),
       Video(id: 'v2', name: 'Priya Nair', job: 'Full re-roof', duration: '2:03', quote: 'Honestly the easiest builder I have ever dealt with. Fixed price, no surprises.', status: 'published', views: 1243, hue: const Color(0xFF1F4A5C), platforms: ['Google', 'Website', 'Facebook']),
-      Video(id: 'v3', name: 'James Carter', job: 'Gutter replacement', duration: '1:32', quote: 'Quick, tidy and fair. I told my whole street about them.', status: 'approved', views: 312, hue: const Color(0xFF5C2A3B), platforms: ['Website']),
+      Video(id: 'v3', name: 'James Carter', job: 'Gutter replacement', duration: '1:32', quote: 'Quick, tidy and fair. I told my whole street about them.', status: 'approved', views: 312, hue: const Color(0xFF5C2A3B), platforms: ['Website'],
+          submitted: '18 Nov 2026, 02:27',
+          captureVerified: false,
+          captureSignals: ['Recorded in the browser during this session.', 'Submitted 165s after the session opened.', '5s recording inside a 165s session.', '1779KB received.', 'Permission was given in this session.', '2 takes before the one submitted.'],
+          captureNotes: ['Recorded from the same network as 1 other testimonial for this business within 30 days.'],
+          aiSummary: 'Theme: speed and tidiness. Tone: warm and positive. Mentions: the gutters, the crew.'),
       Video(id: 'v4', name: 'Aisha Rahman', job: 'Flat roof repair', duration: '1:55', quote: 'Three other firms never called back. These guys fixed the leak in a day.', status: 'published', views: 874, hue: const Color(0xFF2A5C3F), platforms: ['Instagram', 'YouTube']),
       Video(id: 'v5', name: 'Hannah Cole', job: 'Boiler service', duration: '', quote: 'Booked online, engineer arrived early and explained everything. Would recommend to anyone.', status: 'published', views: 96, hue: const Color(0xFF3F3A2A), platforms: ['Google'], rating: 5, written: true),
       Video(id: 'v6', name: 'Omar Haddad', job: 'Kitchen fitting', duration: '0:58', quote: 'Finished a day early and left it spotless.', status: 'approved', views: 41, hue: const Color(0xFF2A3F5C), platforms: [], rating: 4),

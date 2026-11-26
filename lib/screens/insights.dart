@@ -53,7 +53,7 @@ class InsightsScreen extends StatelessWidget {
                                 child: Padding(
                                   padding: const EdgeInsets.symmetric(horizontal: 4),
                                   child: Column(mainAxisAlignment: MainAxisAlignment.end, children: [
-                                    Text('${d.weeklyViews[i]}', style: TextStyle(fontSize: 10.5, color: i == d.weeklyViews.length - 1 ? C.primary : C.muted, fontWeight: FontWeight.w600)),
+                                    Text('${d.weeklyViews[i]}', style: TextStyle(fontSize: 11, color: i == d.weeklyViews.length - 1 ? C.primary : C.muted, fontWeight: FontWeight.w600)),
                                     const SizedBox(height: 4),
                                     Container(
                                       height: 110 * d.weeklyViews[i] / maxWeek + 4,
@@ -63,7 +63,7 @@ class InsightsScreen extends StatelessWidget {
                                       ),
                                     ).animate(delay: (70 * i).ms).scaleY(begin: 0, end: 1, alignment: Alignment.bottomCenter, duration: 700.ms, curve: Curves.easeOutCubic),
                                     const SizedBox(height: 6),
-                                    Text(i == d.weeklyViews.length - 1 ? 'Now' : '-${d.weeklyViews.length - 1 - i}w', style: TextStyle(fontSize: 10, color: C.muted)),
+                                    Text(i == d.weeklyViews.length - 1 ? 'Now' : '-${d.weeklyViews.length - 1 - i}w', style: TextStyle(fontSize: 11, color: C.muted)),
                                   ]),
                                 ),
                               ),

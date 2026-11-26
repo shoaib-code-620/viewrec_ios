@@ -53,9 +53,7 @@ class OverviewScreen extends StatelessWidget {
         const SizedBox(height: 6),
       ],
       EntitlementBanner(onBilling: () => shell.goTo(9)),
-      reduceMotion(context)
-          ? _hero(context, s).reveal(context, n++)
-          : _hero(context, s).reveal(context, n++).animate().shimmer(delay: 1100.ms, duration: 1500.ms, color: Colors.white.withValues(alpha: 0.16), angle: 0.6),
+      _hero(context, s).reveal(context, n++),
       const SizedBox(height: 18),
       _quickActions(context).reveal(context, n++),
       const SizedBox(height: 18),
@@ -123,7 +121,7 @@ class OverviewScreen extends StatelessWidget {
                       child: const Row(mainAxisSize: MainAxisSize.min, children: [
                         Icon(PIconsBold.videoCamera, size: 13, color: Colors.white),
                         SizedBox(width: 6),
-                        Flexible(child: Text('Videos', maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: Colors.white))),
+                        Flexible(child: Text('Videos', maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white))),
                       ]),
                     ),
                   ),
@@ -178,7 +176,7 @@ class OverviewScreen extends StatelessWidget {
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
                         decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(11)),
-                        child: const Text('Copy', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w800, color: Color(0xFF0847A0))),
+                        child: const Text('Copy', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: Color(0xFF0847A0))),
                       ),
                     ),
                   ]),
@@ -227,7 +225,7 @@ class OverviewScreen extends StatelessWidget {
       ('Add your customers', s.customers > 0, 3),
       ('Send your first invitations', s.invitesSent > 0, 3),
       ('Collect your first testimonial', s.testimonials > 0, 1),
-      ('Put your reviews on your website', s.embeds > 0, 6),
+      ('Put your reviews on your website', s.embeds > 0, 23),
     ];
     final done = tasks.where((t) => t.$2).length;
     if (done == tasks.length) return const SizedBox.shrink();
@@ -242,12 +240,12 @@ class OverviewScreen extends StatelessWidget {
               stroke: 6,
               color: C.primary,
               track: C.surface2,
-              child: Text('$done/${tasks.length}', style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w800)),
+              child: Text('$done/${tasks.length}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800)),
             ),
             const SizedBox(width: 14),
             const Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text('Get started', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16.5)),
+                Text('Get started', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 17)),
                 SizedBox(height: 2),
                 Muted('Finish setup to get more videos', size: 12.5),
               ]),
@@ -269,7 +267,7 @@ class OverviewScreen extends StatelessWidget {
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(t.$1,
-                        style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w600, color: t.$2 ? C.muted : C.text, decoration: t.$2 ? TextDecoration.lineThrough : null)),
+                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: t.$2 ? C.muted : C.text, decoration: t.$2 ? TextDecoration.lineThrough : null)),
                   ),
                   if (!t.$2) Icon(PIconsBold.caretRight, size: 14, color: C.muted),
                 ]),
@@ -324,8 +322,8 @@ class _StoryCard extends StatelessWidget {
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Row(children: [for (var i = 0; i < 5; i++) Icon(i < video.rating ? PIconsFill.star : PIconsRegular.star, size: 12, color: const Color(0xFFFFC21A))]),
                 const SizedBox(height: 6),
-                Text(video.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w800, color: Colors.white)),
-                Text(video.job, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w500, color: Colors.white.withValues(alpha: 0.75))),
+                Text(video.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: Colors.white)),
+                Text(video.job, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Colors.white.withValues(alpha: 0.75))),
               ]),
             ),
           ]),
@@ -383,7 +381,7 @@ class _QuickActionsState extends State<_QuickActions> {
           child: Icon(it.$1, color: it.$3, size: 26),
         ),
         const SizedBox(height: 7),
-        Text(it.$2, style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: C.muted)),
+        Text(it.$2, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: C.muted)),
       ]);
 
   @override

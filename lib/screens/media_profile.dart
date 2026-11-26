@@ -220,7 +220,7 @@ class _ProfileBodyState extends State<_ProfileBody> {
           child: Column(children: [
             Text(value, style: const TextStyle(color: Colors.white, fontSize: 21, fontWeight: FontWeight.w800, letterSpacing: -0.6)),
             const SizedBox(height: 1),
-            Text(label, style: TextStyle(color: Colors.white.withValues(alpha: 0.8), fontSize: 11.5, fontWeight: FontWeight.w700)),
+            Text(label, style: TextStyle(color: Colors.white.withValues(alpha: 0.8), fontSize: 12, fontWeight: FontWeight.w700)),
           ]),
         ),
       );
@@ -251,7 +251,7 @@ class _ProfileBodyState extends State<_ProfileBody> {
               Text('${p.handle} · ${p.category}', textAlign: TextAlign.center, style: TextStyle(color: Colors.white.withValues(alpha: 0.85), fontSize: 13)),
               if (p.about.isNotEmpty) ...[
                 const SizedBox(height: 10),
-                Text(p.about, textAlign: TextAlign.center, style: TextStyle(color: Colors.white.withValues(alpha: 0.9), fontSize: 13.5, height: 1.4)),
+                Text(p.about, textAlign: TextAlign.center, style: TextStyle(color: Colors.white.withValues(alpha: 0.9), fontSize: 14, height: 1.4)),
               ],
               const SizedBox(height: 18),
               Row(children: [
@@ -284,7 +284,7 @@ class _ProfileBodyState extends State<_ProfileBody> {
             const Spacer(),
             Row(children: [for (var k = 0; k < r.rating.clamp(0, 5); k++) const Icon(Icons.star_rounded, size: 11, color: Color(0xFFFFC21A))]),
             const SizedBox(height: 2),
-            Text(r.reviewer, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 11.5)),
+            Text(r.reviewer, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 12)),
           ]),
         ),
       );
@@ -449,7 +449,7 @@ class _BusinessRowState extends State<_BusinessRow> {
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Row(children: [
-                  Flexible(child: Text(b.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14.5))),
+                  Flexible(child: Text(b.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15))),
                   if (b.verified) Padding(padding: const EdgeInsets.only(left: 4), child: Icon(Icons.verified_rounded, size: 14, color: C.blue)),
                 ]),
                 Text(b.handle.isEmpty ? b.category : '${b.handle} · ${b.category}', maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: C.muted)),

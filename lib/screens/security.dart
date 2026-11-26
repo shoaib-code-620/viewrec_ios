@@ -94,12 +94,12 @@ class _BodyState extends State<_Body> {
               const SizedBox(width: 12),
               Expanded(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(s.devices[i].device, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14.5)),
+                  Text(s.devices[i].device, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
                   Muted('${s.devices[i].place} · ${s.devices[i].when}', size: 12.5),
                 ]),
               ),
               if (s.devices[i].current)
-                Text('This device', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w800, color: C.green))
+                Text('This device', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: C.green))
               else
                 TextButton(onPressed: () => _revoke(s.devices[i]), child: Text('Sign out', style: TextStyle(color: C.rec, fontWeight: FontWeight.w800))),
             ]),

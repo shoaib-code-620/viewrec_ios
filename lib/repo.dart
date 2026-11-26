@@ -18,11 +18,13 @@ abstract class Repo {
   Future<List<Customer>> customers();
   Future<Customer> addCustomer({required String name, required String job, String? contact});
   Future<void> setCustomerStatus(String id, String status);
+  /// Send the next reminder for an invitation. Returns how many reminders have gone out now.
+  Future<int> remindCustomer(String id);
   Future<void> updateCustomer(String id, {String? name, String? job, String? contact});
   Future<void> deleteCustomer(String id);
 
   Future<List<Video>> videos();
-  Future<void> updateVideo(String id, {String? status, List<String>? platforms});
+  Future<void> updateVideo(String id, {String? status, List<String>? platforms, String? transcript});
 
   Future<List<Lead>> leads();
   Future<void> setLeadStatus(String id, String status);
@@ -57,6 +59,8 @@ abstract class Repo {
   Future<ThreadMessage> sendLeadAttachment(String leadId, {required String kind, required String path, required String name, int size = 0, int durationMs = 0, void Function(double)? onProgress});
   /// Change the text of a message you sent. The other person sees it marked as edited.
   Future<ThreadMessage> editLeadMessage(String leadId, String messageId, String text);
+  /// React to a message with an emoji, or pass null to take your reaction back.
+  Future<void> reactLeadMessage(String leadId, String messageId, String? emoji);
   /// Remove a message you sent, for everyone in the conversation.
   Future<void> deleteLeadMessage(String leadId, String messageId);
   /// Note in the conversation that you called this person.
@@ -157,8 +161,18 @@ class MockRepo implements Repo {
 
   @override
   Future<void> setCustomerStatus(String id, String status) async {
-    _customers.firstWhere((c) => c.id == id).status = status;
+    final c = _customers.firstWhere((c) => c.id == id);
+    c.status = status;
+    if (status == 'invited' && c.sentOn.isEmpty) c.sentOn = 'today';
     await _wait(null);
+  }
+
+  @override
+  Future<int> remindCustomer(String id) async {
+    final c = _customers.firstWhere((c) => c.id == id);
+    c.nudges += 1;
+    await _wait(null);
+    return c.nudges;
   }
 
   @override
@@ -180,10 +194,11 @@ class MockRepo implements Repo {
   Future<List<Video>> videos() => _wait(List.of(_videos));
 
   @override
-  Future<void> updateVideo(String id, {String? status, List<String>? platforms}) async {
+  Future<void> updateVideo(String id, {String? status, List<String>? platforms, String? transcript}) async {
     final v = _videos.firstWhere((x) => x.id == id);
     if (status != null) v.status = status;
     if (platforms != null) v.platforms = platforms;
+    if (transcript != null) v.transcript = transcript;
     await _wait(null);
   }
 
@@ -260,6 +275,12 @@ class MockRepo implements Repo {
       'file' => '$mine${last.fileName}',
       _ => '$mine${last.text}',
     };
+  }
+
+  @override
+  Future<void> reactLeadMessage(String leadId, String messageId, String? emoji) async {
+    (_threads[leadId] ?? []).firstWhere((x) => x.id == messageId).myReaction = emoji;
+    await _wait(null);
   }
 
   @override
@@ -608,6 +629,12 @@ class ApiRepo implements Repo {
   Future<void> setCustomerStatus(String id, String status) => _send('PATCH', '/api/v1/customers/$id', {'status': status});
 
   @override
+  Future<int> remindCustomer(String id) async {
+    final r = await _send('POST', '/api/v1/customers/$id/remind');
+    return (r is Map ? r['nudges'] : null) as int? ?? 1;
+  }
+
+  @override
   Future<void> updateCustomer(String id, {String? name, String? job, String? contact}) =>
       _send('PATCH', '/api/v1/customers/$id', {if (name != null) 'name': name, if (job != null) 'job': job, if (contact != null) 'contact': contact});
 
@@ -618,8 +645,8 @@ class ApiRepo implements Repo {
   Future<List<Video>> videos() async => (await _get('/api/v1/videos') as List).map((e) => Video.fromJson(e)).toList();
 
   @override
-  Future<void> updateVideo(String id, {String? status, List<String>? platforms}) =>
-      _send('PATCH', '/api/v1/videos/$id', {if (status != null) 'status': status, if (platforms != null) 'platforms': platforms});
+  Future<void> updateVideo(String id, {String? status, List<String>? platforms, String? transcript}) =>
+      _send('PATCH', '/api/v1/videos/$id', {if (status != null) 'status': status, if (platforms != null) 'platforms': platforms, if (transcript != null) 'transcript': transcript});
 
   @override
   Future<List<Lead>> leads() async => (await _get('/api/v1/leads') as List).map((e) => Lead.fromJson(e)).toList();
@@ -648,6 +675,10 @@ class ApiRepo implements Repo {
 
   @override
   Future<void> deleteLeadMessage(String leadId, String messageId) => _send('DELETE', '/api/v1/leads/$leadId/messages/$messageId');
+
+  @override
+  Future<void> reactLeadMessage(String leadId, String messageId, String? emoji) =>
+      emoji == null ? _send('DELETE', '/api/v1/leads/$leadId/messages/$messageId/reaction') : _send('PUT', '/api/v1/leads/$leadId/messages/$messageId/reaction', {'emoji': emoji});
 
   @override
   Future<ThreadMessage> logLeadCall(String leadId) async => ThreadMessage.fromJson(await _send('POST', '/api/v1/leads/$leadId/calls'));

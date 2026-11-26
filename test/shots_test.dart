@@ -23,6 +23,8 @@ void main() {
     'create': () => const Shell(initialIndex: 2),
     'profile': () => const PublicProfileScreen(businessId: 'b1'),
     'followers': () => const FollowListScreen(businessId: 'b1', name: 'Brightside Dental'),
+    'phonebook_scrolled': () => const Shell(initialIndex: 3),
+    'where': () => const Shell(initialIndex: 7),
     'pricing': () => const PricingScreen(),
     'more': () => const Shell(initialIndex: kMoreIndex),
     'media': () => const Shell(initialIndex: kMediaIndex),
@@ -41,6 +43,11 @@ void main() {
       ));
       await tester.pump(const Duration(seconds: 2));
       await tester.pump(const Duration(seconds: 3));
+      if (e.key == 'phonebook_scrolled') {
+        await tester.drag(find.byType(CustomScrollView).first, const Offset(0, -640));
+        await tester.pump(const Duration(milliseconds: 100));
+        await tester.pump(const Duration(seconds: 1));
+      }
       await tester.runAsync(() async {
         final boundary = key.currentContext!.findRenderObject() as RenderRepaintBoundary;
         final image = await boundary.toImage(pixelRatio: 1);

@@ -163,15 +163,15 @@ class _TestimonialCard extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(18, 14, 18, 16),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               if (v.quote.isNotEmpty)
-                Text('“${v.quote}”', maxLines: v.written ? 4 : 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 14.5, height: 1.45, fontWeight: FontWeight.w500)),
+                Text('“${v.quote}”', maxLines: v.written ? 4 : 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 15, height: 1.45, fontWeight: FontWeight.w500)),
               const SizedBox(height: 12),
               Row(children: [
                 Avatar(v.name, size: 30),
                 const SizedBox(width: 10),
-                Expanded(child: Text(v.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13.5))),
+                Expanded(child: Text(v.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14))),
                 Icon(PIconsRegular.eye, size: 15, color: C.muted),
                 const SizedBox(width: 4),
-                Text('${v.views}', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: C.muted)),
+                Text('${v.views}', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: C.muted)),
               ]),
             ]),
           ),
@@ -215,8 +215,8 @@ class _TestimonialCard extends StatelessWidget {
                   left: 12,
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-                    decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.35), borderRadius: BorderRadius.circular(9)),
-                    child: Text(v.duration, style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: Colors.white)),
+                    decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.35), borderRadius: BorderRadius.circular(8)),
+                    child: Text(v.duration, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white)),
                   ),
                 ),
               Positioned(top: 12, right: 12, child: StatusBadge(v.status)),

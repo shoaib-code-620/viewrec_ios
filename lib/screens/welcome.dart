@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../icons.dart';
+import '../liquid_widgets.dart';
 import '../motion.dart';
 import '../theme.dart';
 import '../widgets.dart';
@@ -22,9 +23,7 @@ class WelcomeScreen extends StatelessWidget {
     const words = ['Your', 'happiest', 'customer', 'is', 'your', 'best', 'salesperson.'];
     return Scaffold(
       body: Stack(children: [
-        const Positioned.fill(child: FloatingDots(count: 12)),
-        const Positioned(right: -120, top: -80, child: AmbientGlow(color: C.primary, size: 380)),
-        Positioned(left: -140, top: 520, child: AmbientGlow(color: C.blue, size: 360)),
+        const Positioned.fill(child: LiquidBackdrop()),
         SafeArea(
           child: ListView(padding: const EdgeInsets.fromLTRB(24, 12, 24, 40), children: [
             Row(children: [
@@ -64,7 +63,7 @@ class WelcomeScreen extends StatelessWidget {
                     child: Icon(PIconsBold.check, size: 14, color: C.green),
                   ),
                   const SizedBox(width: 12),
-                  Expanded(child: Text(points[i], style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w600))),
+                  Expanded(child: Text(points[i], style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600))),
                 ]).reveal(context, 11 + i, 0.15),
               ),
             const SizedBox(height: 18),
@@ -243,16 +242,16 @@ class _PhoneMockState extends State<_PhoneMock> with TickerProviderStateMixin {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  Text('REC  $_clock', style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w800, letterSpacing: 0.3)),
+                  Text('REC  $_clock', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, letterSpacing: 0.3)),
                 ]),
               ),
             ),
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(18),
-              decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(22), border: Border.all(color: Colors.white.withValues(alpha: 0.08))),
+              decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(24), border: Border.all(color: Colors.white.withValues(alpha: 0.08))),
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                const Text('JUST READ THIS', style: TextStyle(fontSize: 10, letterSpacing: 1.6, fontWeight: FontWeight.w800, color: Color(0xFF8A9BB8))),
+                const Text('JUST READ THIS', style: TextStyle(fontSize: 11, letterSpacing: 1.6, fontWeight: FontWeight.w800, color: Color(0xFF8A9BB8))),
                 const SizedBox(height: 10),
                 for (var i = 0; i < _lines.length; i++)
                   Padding(

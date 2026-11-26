@@ -230,7 +230,11 @@ class ThreadMessage {
   String status;
   /// True once the text was changed after sending.
   bool edited;
+  /// An emoji you reacted with, and one the other person reacted with. Null when there is none.
+  String? myReaction, theirReaction;
   ThreadMessage({
+    this.myReaction,
+    this.theirReaction,
     required this.id,
     required this.from,
     required this.text,
@@ -255,5 +259,7 @@ class ThreadMessage {
         durationMs: j['durationMs'] ?? 0,
         status: j['status'] ?? 'sent',
         edited: j['edited'] == true,
+        myReaction: (j['reactions'] is Map ? j['reactions']['you'] : null) as String?,
+        theirReaction: (j['reactions'] is Map ? j['reactions']['them'] : null) as String?,
       );
 }

@@ -208,11 +208,11 @@ class _StoryViewerState extends State<StoryViewer> with SingleTickerProviderStat
                   Expanded(
                     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                       Row(children: [
-                        Flexible(child: Text(group.business, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14.5, color: Colors.white))),
+                        Flexible(child: Text(group.business, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: Colors.white))),
                         const SizedBox(width: 6),
-                        Text(item.when, style: TextStyle(fontSize: 12.5, color: Colors.white.withValues(alpha: 0.7))),
+                        Text(item.when, style: TextStyle(fontSize: 13, color: Colors.white.withValues(alpha: 0.7))),
                       ]),
-                      Text(group.category, style: TextStyle(fontSize: 11.5, color: Colors.white.withValues(alpha: 0.7))),
+                      Text(group.category, style: TextStyle(fontSize: 12, color: Colors.white.withValues(alpha: 0.7))),
                     ]),
                   ),
                   if (!group.mine) IconButton(onPressed: _menu, icon: const Icon(Icons.more_horiz_rounded, color: Colors.white)),
@@ -441,7 +441,7 @@ class _ReelPageState extends State<_ReelPage> with SingleTickerProviderStateMixi
                 ),
               ]),
               const SizedBox(height: 12),
-              Text(r.caption, maxLines: 3, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 14.5, height: 1.4, color: Colors.white, fontWeight: FontWeight.w500)),
+              Text(r.caption, maxLines: 3, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 15, height: 1.4, color: Colors.white, fontWeight: FontWeight.w500)),
               const SizedBox(height: 10),
               Row(children: [
                 for (var k = 0; k < 5; k++) Icon(k < r.rating ? Icons.star_rounded : Icons.star_outline_rounded, size: 15, color: const Color(0xFFFFC21A)),

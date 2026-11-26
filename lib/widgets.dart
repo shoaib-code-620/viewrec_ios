@@ -1,11 +1,160 @@
 import 'package:flutter/services.dart' show HapticFeedback;
 import 'package:flutter/material.dart';
+import 'order_store.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'liquid_widgets.dart';
 import 'motion.dart';
 import 'theme.dart';
 
 /// Scrollable page with the app's standard padding.
+class _ReorderData {
+  final String group, id;
+  const _ReorderData(this.group, this.id);
+}
+
+/// Press and hold, then drag an item onto another one in the same [group] to move it there. The page scrolls
+/// when the finger nears the top or bottom edge. [onMove] receives the dragged id and the id it was dropped on.
+class ReorderItem extends StatefulWidget {
+  final String group, id;
+  final void Function(String from, String to) onMove;
+  final Widget child;
+  final double radius;
+  const ReorderItem({super.key, required this.group, required this.id, required this.onMove, required this.child, this.radius = 24});
+  @override
+  State<ReorderItem> createState() => _ReorderItemState();
+}
+
+class _ReorderItemState extends State<ReorderItem> {
+  bool over = false;
+
+  void _autoScroll(DragUpdateDetails d) {
+    final pos = Scrollable.maybeOf(context)?.position;
+    if (pos == null) return;
+    final h = MediaQuery.sizeOf(context).height;
+    final y = d.globalPosition.dy;
+    final delta = y < 150 ? -(150 - y) / 6 : (y > h - 170 ? (y - (h - 170)) / 6 : 0.0);
+    if (delta != 0) pos.jumpTo((pos.pixels + delta).clamp(pos.minScrollExtent, pos.maxScrollExtent));
+  }
+
+  @override
+  Widget build(BuildContext context) => DragTarget<_ReorderData>(
+        onWillAcceptWithDetails: (d) => d.data.group == widget.group && d.data.id != widget.id,
+        onMove: (_) {
+          if (!over) setState(() => over = true);
+        },
+        onLeave: (_) {
+          if (over) setState(() => over = false);
+        },
+        onAcceptWithDetails: (d) {
+          setState(() => over = false);
+          HapticFeedback.mediumImpact();
+          widget.onMove(d.data.id, widget.id);
+        },
+        builder: (context, _, __) => LayoutBuilder(
+          builder: (context, box) => LongPressDraggable<_ReorderData>(
+            data: _ReorderData(widget.group, widget.id),
+            delay: const Duration(milliseconds: 260),
+            hapticFeedbackOnStart: true,
+            onDragUpdate: _autoScroll,
+            feedback: Material(
+              color: Colors.transparent,
+              child: SizedBox(
+                width: box.hasBoundedWidth ? box.maxWidth : null,
+                height: box.hasBoundedHeight ? box.maxHeight : null,
+                child: Transform.scale(scale: 1.05, child: widget.child),
+              ),
+            ),
+            childWhenDragging: Opacity(opacity: 0.3, child: widget.child),
+            child: Container(
+              foregroundDecoration: over ? BoxDecoration(borderRadius: BorderRadius.circular(widget.radius), border: Border.all(color: C.primary, width: 2.5)) : null,
+              child: widget.child,
+            ),
+          ),
+        ),
+      );
+}
+
+/// Wrap pages that sit inside another page that already draws the backdrop, so it is not drawn twice.
+class BackdropScope extends InheritedWidget {
+  const BackdropScope({super.key, required super.child});
+  static bool active(BuildContext c) => c.getInheritedWidgetOfExactType<BackdropScope>() != null;
+  @override
+  bool updateShouldNotify(BackdropScope oldWidget) => false;
+}
+
+/// A page with a strip of tabs on top, like the website's sub tabs. Each tab is a full page.
+class TabbedSection extends StatefulWidget {
+  final List<(String, WidgetBuilder)> tabs;
+  final int initial;
+  /// Where the order the person arranged the tabs in is kept. Without it the tabs cannot be moved.
+  final String? storageKey;
+  const TabbedSection({super.key, required this.tabs, this.initial = 0, this.storageKey});
+  @override
+  State<TabbedSection> createState() => _TabbedSectionState();
+}
+
+class _TabbedSectionState extends State<TabbedSection> {
+  late final List<String> _default = [for (final t in widget.tabs) t.$1];
+  late List<String> order = List.of(_default);
+  late String selected = widget.tabs[widget.initial.clamp(0, widget.tabs.length - 1)].$1;
+
+  @override
+  void initState() {
+    super.initState();
+    final k = widget.storageKey;
+    if (k != null) {
+      OrderStore.load(k).then((saved) {
+        if (saved != null && mounted) setState(() => order = applyOrder(_default, saved, (s) => s));
+      });
+    }
+  }
+
+  void _move(String from, String to) {
+    setState(() => order = movedBefore(order, from, to));
+    final k = widget.storageKey;
+    if (k != null) OrderStore.save(k, order);
+  }
+
+  void _reset() {
+    setState(() => order = List.of(_default));
+    final k = widget.storageKey;
+    if (k != null) OrderStore.clear(k);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final changed = order.join('|') != _default.join('|');
+    final body = widget.tabs.firstWhere((t) => t.$1 == selected, orElse: () => widget.tabs.first);
+    return Stack(children: [
+      const Positioned.fill(child: LiquidBackdrop()),
+      Column(children: [
+        SizedBox(
+          height: 54,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.fromLTRB(18, 8, 10, 6),
+            children: [
+              for (final label in order)
+                widget.storageKey == null
+                    ? AppChip(label, active: selected == label, onTap: () => setState(() => selected = label))
+                    : ReorderItem(group: 'tabs', id: label, radius: 999, onMove: _move, child: AppChip(label, active: selected == label, onTap: () => setState(() => selected = label))),
+              if (changed) IconButton(tooltip: 'Reset the tab order', onPressed: _reset, icon: Icon(Icons.restart_alt_rounded, color: C.muted), visualDensity: VisualDensity.compact),
+            ],
+          ),
+        ),
+        Expanded(
+          child: BackdropScope(
+            child: AnimatedSwitcher(
+              duration: kFast,
+              child: KeyedSubtree(key: ValueKey(selected), child: Builder(builder: body.$2)),
+            ),
+          ),
+        ),
+      ]),
+    ]);
+  }
+}
+
 class AppPage extends StatelessWidget {
   final List<Widget> children;
   /// Fade and rise each block in one after another. Turn off for pages that stagger by themselves.
@@ -17,7 +166,7 @@ class AppPage extends StatelessWidget {
   Widget build(BuildContext context) {
     var n = 0;
     return Stack(children: [
-      const Positioned.fill(child: LiquidBackdrop()),
+      if (!BackdropScope.active(context)) const Positioned.fill(child: LiquidBackdrop()),
       SafeArea(
         bottom: false,
         child: ListView(
@@ -195,22 +344,19 @@ class AppButton extends StatelessWidget {
           duration: kMed,
           curve: kCurve,
           decoration: deco,
-          padding: EdgeInsets.symmetric(vertical: small ? 11 : 16, horizontal: 22),
+          padding: EdgeInsets.symmetric(vertical: small ? 11 : 16, horizontal: small ? 14 : 22),
           child: AnimatedSwitcher(
             duration: kFast,
             child: loading
                 ? SizedBox(key: const ValueKey('l'), height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2.4, color: fg))
                 : Row(key: const ValueKey('t'), mainAxisAlignment: MainAxisAlignment.center, mainAxisSize: MainAxisSize.max, children: [
                     if (icon != null) ...[Icon(icon, size: 18, color: fg), const SizedBox(width: 8)],
-                    Flexible(child: Text(label, textAlign: TextAlign.center, style: TextStyle(color: fg, fontWeight: FontWeight.w700, fontSize: small ? 14 : 15.5, letterSpacing: 0.1))),
+                    Flexible(child: FittedBox(fit: BoxFit.scaleDown, child: Text(label, maxLines: 1, softWrap: false, textAlign: TextAlign.center, style: TextStyle(color: fg, fontWeight: FontWeight.w700, fontSize: small ? 14 : 15.5, letterSpacing: 0.1)))),
                   ]),
           ),
         ),
       ),
     );
-    if (style == BtnStyle.primary && !small && enabled && !reduceMotion(context)) {
-      return btn.animate(onPlay: (c) => c.repeat()).shimmer(duration: 2600.ms, delay: 2800.ms, color: Colors.white.withValues(alpha: 0.22), angle: 0.5);
-    }
     return btn;
   }
 }
@@ -301,7 +447,7 @@ class StatCard extends StatelessWidget {
           const SizedBox(height: 14),
           _value(),
           const SizedBox(height: 4),
-          Text(label, maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: C.muted, height: 1.25)),
+          Text(label, maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: C.muted, height: 1.25)),
           if (delta != null) ...[
             const SizedBox(height: 8),
             Container(
@@ -360,7 +506,7 @@ class SectionHeader extends StatelessWidget {
             Pressable(
               onTap: onAction,
               child: Row(mainAxisSize: MainAxisSize.min, children: [
-                Text(action!, style: TextStyle(color: C.primary, fontWeight: FontWeight.w700, fontSize: 13.5)),
+                Text(action!, style: TextStyle(color: C.primary, fontWeight: FontWeight.w700, fontSize: 14)),
                 Icon(Icons.chevron_right_rounded, size: 18, color: C.primary),
               ]),
             ),
@@ -417,8 +563,8 @@ class VideoThumb extends StatelessWidget {
                 top: 12,
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-                  decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.35), borderRadius: BorderRadius.circular(9)),
-                  child: Text(duration!, style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: Colors.white)),
+                  decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.35), borderRadius: BorderRadius.circular(8)),
+                  child: Text(duration!, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white)),
                 ),
               ),
           ]),
@@ -452,6 +598,40 @@ void showMsg(BuildContext context, String m) {
     ));
 }
 
+/// A message with an Undo button. It goes away by itself after a few seconds, like the other messages.
+void showUndo(BuildContext context, String message, VoidCallback onUndo, {Duration duration = const Duration(seconds: 5)}) {
+  final bottom = MediaQuery.of(context).padding.bottom;
+  final messenger = ScaffoldMessenger.of(context);
+  messenger
+    ..hideCurrentSnackBar()
+    ..showSnackBar(SnackBar(
+      behavior: SnackBarBehavior.floating,
+      margin: EdgeInsets.fromLTRB(18, 0, 18, 104 + bottom),
+      elevation: 0,
+      backgroundColor: Colors.transparent,
+      duration: duration,
+      // Newer Flutter keeps a message with an action on screen until it is tapped. This one is not an action message.
+      content: Container(
+        padding: const EdgeInsets.fromLTRB(16, 6, 6, 6),
+        decoration: BoxDecoration(
+          color: C.dark ? const Color(0xFF23233A) : const Color(0xFF0E1B33),
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.25), blurRadius: 24, offset: const Offset(0, 10))],
+        ),
+        child: Row(children: [
+          Expanded(child: Text(message, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14, fontFamily: 'PlusJakartaSans'))),
+          TextButton(
+            onPressed: () {
+              messenger.hideCurrentSnackBar();
+              onUndo();
+            },
+            child: const Text('Undo', style: TextStyle(color: Color(0xFF8CC3FF), fontWeight: FontWeight.w800, fontSize: 14)),
+          ),
+        ]),
+      ),
+    ));
+}
+
 /// Tappable row: icon, title, optional subtitle, optional trailing widget.
 class Tile extends StatelessWidget {
   final IconData icon;
@@ -461,8 +641,11 @@ class Tile extends StatelessWidget {
   final VoidCallback? onTap;
   final Color? iconColor;
   final bool divider;
+  /// Replaces the coloured icon, for example with a person's avatar.
+  final Widget? leading;
   const Tile({
     super.key,
+    this.leading,
     required this.icon,
     required this.title,
     this.subtitle,
@@ -481,7 +664,7 @@ class Tile extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 4),
         decoration: BoxDecoration(border: divider ? Border(bottom: BorderSide(color: C.border)) : null),
         child: Row(children: [
-          GlossIcon(icon, col),
+          leading ?? GlossIcon(icon, col),
           const SizedBox(width: 14),
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -534,7 +717,7 @@ class InfoBanner extends StatelessWidget {
         child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
           GlossIcon(icon, color, size: 30),
           const SizedBox(width: 12),
-          Expanded(child: Padding(padding: const EdgeInsets.only(top: 1), child: Text(text, style: const TextStyle(fontSize: 13.5, height: 1.45, fontWeight: FontWeight.w500)))),
+          Expanded(child: Padding(padding: const EdgeInsets.only(top: 1), child: Text(text, style: const TextStyle(fontSize: 14, height: 1.45, fontWeight: FontWeight.w500)))),
         ]),
       );
 }
@@ -616,7 +799,7 @@ class Field extends StatelessWidget {
   }
 }
 
-Future<void> showSheet(BuildContext context, Widget child) => showModalBottomSheet(
+Future<T?> showSheet<T>(BuildContext context, Widget child) => showModalBottomSheet<T>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
@@ -697,7 +880,7 @@ class _Pulse extends StatelessWidget {
 }
 
 /// A short, centred confirmation: a circle pops in and a tick draws itself, then it fades away.
-void showSuccess(BuildContext context, String text, {bool confetti = true}) {
+void showSuccess(BuildContext context, String text, {bool confetti = false}) {
   if (confetti) showConfetti(context);
   final overlay = Overlay.maybeOf(context, rootOverlay: true);
   if (overlay == null) {
@@ -745,7 +928,7 @@ class _SuccessToastState extends State<_SuccessToast> with SingleTickerProviderS
                     scale: 0.6 + 0.4 * pop,
                     child: Container(
                       padding: const EdgeInsets.fromLTRB(28, 24, 28, 20),
-                      decoration: BoxDecoration(color: C.dark ? C.surface2 : const Color(0xF2171722), borderRadius: BorderRadius.circular(26), boxShadow: const [BoxShadow(color: Color(0x40000000), blurRadius: 30, offset: Offset(0, 12))]),
+                      decoration: BoxDecoration(color: C.dark ? C.surface2 : const Color(0xF2171722), borderRadius: BorderRadius.circular(28), boxShadow: const [BoxShadow(color: Color(0x40000000), blurRadius: 30, offset: Offset(0, 12))]),
                       child: Column(mainAxisSize: MainAxisSize.min, children: [
                         SizedBox(width: 56, height: 56, child: CustomPaint(painter: _TickPainter(tick, C.green))),
                         const SizedBox(height: 12),
@@ -866,7 +1049,7 @@ class DropZoneBar<T extends Object> extends StatelessWidget {
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
               color: C.surface.withValues(alpha: 0.97),
-              borderRadius: BorderRadius.circular(22),
+              borderRadius: BorderRadius.circular(24),
               border: Border.all(color: C.border),
               boxShadow: const [BoxShadow(color: Color(0x33000000), blurRadius: 24, offset: Offset(0, 10))],
             ),
@@ -906,7 +1089,7 @@ class DropZoneBar<T extends Object> extends StatelessWidget {
             child: Column(mainAxisSize: MainAxisSize.min, children: [
               Icon(z.icon, size: 20, color: hot ? Colors.white : z.color),
               const SizedBox(height: 3),
-              Text(z.label, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w800, color: hot ? Colors.white : z.color)),
+              Text(z.label, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: hot ? Colors.white : z.color)),
             ]),
           );
         },

@@ -19,7 +19,7 @@ class _AssistantScreenState extends State<AssistantScreen> {
   final input = TextEditingController();
   final scroll = ScrollController();
   final msgs = <_Msg>[
-    const _Msg("Hi! I'm your ViewRec assistant. Ask me how to get more videos, who to invite, or how to post a testimonial.", false),
+    const _Msg("Hello. I am the ViewRec assistant. Ask me how to get more videos, who to invite, or how to post a testimonial.", false),
   ];
   bool typing = false;
 
@@ -87,7 +87,7 @@ class _AssistantScreenState extends State<AssistantScreen> {
                           bottomRight: Radius.circular(m.mine ? 4 : 18),
                         ),
                       ),
-                      child: Text(m.text, style: const TextStyle(height: 1.4, fontSize: 14.5)),
+                      child: Text(m.text, style: const TextStyle(height: 1.4, fontSize: 15)),
                     ),
                   ),
                 if (typing)
@@ -96,7 +96,7 @@ class _AssistantScreenState extends State<AssistantScreen> {
                   Wrap(spacing: 8, runSpacing: 8, children: [
                     for (final s in suggestions)
                       ActionChip(
-                        label: Text(s, style: const TextStyle(fontSize: 12.5)),
+                        label: Text(s, style: const TextStyle(fontSize: 13)),
                         backgroundColor: C.surface,
                         side: BorderSide(color: C.border),
                         onPressed: () => _send(s),

@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../async_view.dart';
+import '../liquid_widgets.dart';
 import '../data.dart';
 import '../motion.dart';
 import '../repo.dart';
 import '../theme.dart';
 import '../web_data.dart';
 import '../widgets.dart';
+import 'bundles.dart';
 import 'import.dart';
 import 'contact_detail.dart';
 
@@ -38,7 +40,11 @@ class _PhonebookBodyState extends State<_PhonebookBody> {
   bool selecting = false;
   final Set<String> picked = {};
   List<Bundle> groups = [];
-  final Map<String, GlobalKey> _letterKeys = {};
+  final _scroll = ScrollController();
+  final _topKey = GlobalKey();
+  double _topH = 560;
+  String? bubble; // the big letter shown while dragging along the index
+  static const _alphabet = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '#'];
 
   @override
   void initState() {
@@ -191,23 +197,10 @@ class _PhonebookBodyState extends State<_PhonebookBody> {
       showMsg(context, 'Tick the people you want in the group first');
       return;
     }
-    final name = TextEditingController();
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: C.surface,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
-        title: const Text('Name this group', style: TextStyle(fontWeight: FontWeight.w800)),
-        content: Field('Group name', controller: name, hint: 'Roof replacements'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text('Cancel', style: TextStyle(color: C.muted, fontWeight: FontWeight.w700))),
-          TextButton(onPressed: () => Navigator.pop(ctx, true), child: Text('Create', style: TextStyle(color: C.primary, fontWeight: FontWeight.w800))),
-        ],
-      ),
-    );
-    if (ok != true || name.text.trim().isEmpty) return;
+    final d = await askGroupDetails(context);
+    if (d == null) return;
     try {
-      final b = await webRepo.saveBundle(name: name.text.trim(), memberIds: picked.toList());
+      final b = await webRepo.saveBundle(name: d.name, memberIds: picked.toList(), purpose: d.purpose, note: d.note);
       if (!mounted) return;
       setState(() {
         groups.insert(0, b);
@@ -290,10 +283,14 @@ class _PhonebookBodyState extends State<_PhonebookBody> {
         ]),
       );
 
+  double get _scale => MediaQuery.textScalerOf(context).scale(1).clamp(1.0, 1.5);
+  double get _rowH => 68.0 * _scale;
+  static const _headerH = 32.0;
+
   Widget _row(Customer c, {required bool last}) {
     final on = picked.contains(c.id);
     final sub = [c.job, if (c.phone.isNotEmpty) c.phone else c.date].where((s) => s.isNotEmpty).join(' · ');
-    final row = Pressable(
+    final content = Pressable(
       scale: 0.99,
       onTap: () {
         if (selecting) {
@@ -304,9 +301,9 @@ class _PhonebookBodyState extends State<_PhonebookBody> {
           });
         }
       },
-      child: Container(
-        color: C.dark ? C.surface : Colors.white.withValues(alpha: 0.0),
-        padding: const EdgeInsets.fromLTRB(16, 11, 22, 11),
+      // Room on the right keeps the A-Z index clear of the status and the swipe area.
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(18, 0, 34, 0),
         child: Row(children: [
           if (selecting) ...[
             AnimatedContainer(
@@ -322,13 +319,13 @@ class _PhonebookBodyState extends State<_PhonebookBody> {
             ),
             const SizedBox(width: 12),
           ],
-          Avatar(c.name, size: 42),
-          const SizedBox(width: 12),
+          Avatar(c.name, size: 44),
+          const SizedBox(width: 14),
           Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(c.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15.5)),
+            child: Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(c.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
               const SizedBox(height: 1),
-              Muted(sub, size: 12.5, maxLines: 1),
+              Muted(sub, size: 13, maxLines: 1),
             ]),
           ),
           const SizedBox(width: 8),
@@ -336,11 +333,15 @@ class _PhonebookBodyState extends State<_PhonebookBody> {
         ]),
       ),
     );
-    final divided = Container(
-      decoration: BoxDecoration(border: last ? null : Border(bottom: BorderSide(color: C.border.withValues(alpha: 0.7), width: 1))),
-      child: row,
+    final row = SizedBox(
+      height: _rowH,
+      child: Column(children: [
+        Expanded(child: content),
+        // A thin line that starts under the name, like a phone's contact list.
+        Container(height: 1, margin: EdgeInsets.only(left: selecting ? 98 : 76), color: last ? Colors.transparent : C.border.withValues(alpha: 0.8)),
+      ]),
     );
-    if (selecting) return divided;
+    if (selecting) return row;
     return Dismissible(
       key: ValueKey('c_${c.id}'),
       direction: DismissDirection.horizontal,
@@ -357,7 +358,7 @@ class _PhonebookBodyState extends State<_PhonebookBody> {
         list.removeWhere((x) => x.id == c.id);
         picked.remove(c.id);
       }),
-      child: divided,
+      child: row,
     );
   }
 
@@ -366,66 +367,76 @@ class _PhonebookBodyState extends State<_PhonebookBody> {
     return RegExp(r'[A-Z]').hasMatch(ch) ? ch : '#';
   }
 
-  Widget _directory(List<Customer> shown) {
+  /// People sorted by name and grouped under their first letter ('#' for anything else, last).
+  (List<String>, Map<String, List<Customer>>) _grouped(List<Customer> shown) {
     final sorted = [...shown]..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
-    final byLetter = <String, List<Customer>>{};
+    final by = <String, List<Customer>>{};
     for (final c in sorted) {
-      byLetter.putIfAbsent(_letter(c), () => []).add(c);
+      by.putIfAbsent(_letter(c), () => []).add(c);
     }
-    final letters = byLetter.keys.toList()..sort((a, b) => a == '#' ? 1 : (b == '#' ? -1 : a.compareTo(b)));
-    for (final l in letters) {
-      _letterKeys.putIfAbsent(l, () => GlobalKey());
-    }
-    return Stack(children: [
-      Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        for (final l in letters) ...[
-          Padding(
-            key: _letterKeys[l],
-            padding: const EdgeInsets.fromLTRB(6, 14, 0, 8),
-            child: Text(l, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: C.primary)),
-          ),
-          Container(
-            decoration: BoxDecoration(
-              gradient: C.dark ? null : LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.white.withValues(alpha: 0.94), Colors.white.withValues(alpha: 0.8)]),
-              color: C.dark ? C.surface : null,
-              borderRadius: BorderRadius.circular(26),
-              border: Border.all(color: C.dark ? C.border : Colors.white),
-              boxShadow: C.shadow,
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(26),
-              child: Column(children: [
-                for (var i = 0; i < byLetter[l]!.length; i++) _row(byLetter[l]![i], last: i == byLetter[l]!.length - 1),
-              ]),
-            ),
-          ),
-        ],
-      ]),
-      if (letters.length > 3)
-        Positioned(
-          right: 0,
-          top: 40,
-          child: GestureDetector(
-            onVerticalDragUpdate: (d) {
-              final i = ((d.localPosition.dy) / 16).floor().clamp(0, letters.length - 1);
-              _jump(letters[i]);
-            },
-            child: Column(children: [
-              for (final l in letters)
-                GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () => _jump(l),
-                  child: SizedBox(width: 20, height: 16, child: Center(child: Text(l, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: C.primary)))),
-                ),
-            ]),
-          ),
-        ),
-    ]);
+    final letters = by.keys.toList()..sort((a, b) => a == '#' ? 1 : (b == '#' ? -1 : a.compareTo(b)));
+    return (letters, by);
   }
 
-  void _jump(String l) {
-    final ctx = _letterKeys[l]?.currentContext;
-    if (ctx != null) Scrollable.ensureVisible(ctx, duration: kMed, curve: kCurve, alignment: 0.05);
+  /// Scrolls so the section for [letter] sits at the top. A letter with nobody under it goes to the next one that has people.
+  void _jumpTo(String letter, List<String> letters, Map<String, List<Customer>> by, {bool animate = false}) {
+    final i = _alphabet.indexOf(letter);
+    final target = letters.firstWhere((l) => _alphabet.indexOf(l) >= i, orElse: () => letters.last);
+    var offset = _topH;
+    for (final l in letters) {
+      if (l == target) break;
+      offset += _headerH + by[l]!.length * _rowH;
+    }
+    if (!_scroll.hasClients) return;
+    final to = offset.clamp(0.0, _scroll.position.maxScrollExtent);
+    if (animate) {
+      _scroll.animateTo(to, duration: kMed, curve: kCurve);
+    } else {
+      _scroll.jumpTo(to);
+    }
+  }
+
+  /// The A-Z strip down the right edge, fixed to the screen and centred. Tap a letter or slide along it.
+  Widget _indexBar(List<String> letters, Map<String, List<Customer>> by) => LayoutBuilder(
+        builder: (context, box) {
+          final itemH = (box.maxHeight / _alphabet.length).clamp(11.0, 17.0);
+          String at(double dy) => _alphabet[(dy / itemH).floor().clamp(0, _alphabet.length - 1)];
+          return GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTapDown: (d) {
+              final l = at(d.localPosition.dy);
+              setState(() => bubble = l);
+              _jumpTo(l, letters, by, animate: true);
+            },
+            onTapUp: (_) => setState(() => bubble = null),
+            onTapCancel: () => setState(() => bubble = null),
+            onVerticalDragUpdate: (d) {
+              final l = at(d.localPosition.dy);
+              if (l != bubble) setState(() => bubble = l);
+              _jumpTo(l, letters, by);
+            },
+            onVerticalDragEnd: (_) => setState(() => bubble = null),
+            child: SizedBox(
+              width: 26,
+              height: itemH * _alphabet.length,
+              child: Column(children: [
+                for (final l in _alphabet)
+                  SizedBox(
+                    height: itemH,
+                    child: Center(
+                      child: Text(l, style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w800, color: letters.contains(l) ? C.primary : C.muted.withValues(alpha: 0.45))),
+                    ),
+                  ),
+              ]),
+            ),
+          );
+        },
+      );
+
+  @override
+  void dispose() {
+    _scroll.dispose();
+    super.dispose();
   }
 
   @override
@@ -440,10 +451,27 @@ class _PhonebookBodyState extends State<_PhonebookBody> {
           seg = keep;
           return r;
         }).length;
+    final (letters, by) = _grouped(shown);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final h = _topKey.currentContext?.size?.height;
+      if (h != null && h != _topH) _topH = h;
+    });
+    final headerColor = C.dark ? C.surface2 : const Color(0xFFEAF1FC);
     return Stack(children: [
-      RefreshIndicator(
-        onRefresh: widget.refresh,
-        child: AppPage(children: [
+      if (!BackdropScope.active(context)) const Positioned.fill(child: LiquidBackdrop()),
+      SafeArea(
+        bottom: false,
+        child: RefreshIndicator(
+          onRefresh: widget.refresh,
+          child: CustomScrollView(
+            controller: _scroll,
+            physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+            slivers: [
+              SliverToBoxAdapter(
+                child: Padding(
+                  key: _topKey,
+                  padding: const EdgeInsets.fromLTRB(18, 8, 18, 0),
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           Row(children: [
             _segTile(_Seg.all, 'Everyone', count(_Seg.all)),
             _segTile(_Seg.notInvited, 'Not invited', count(_Seg.notInvited)),
@@ -517,8 +545,8 @@ class _PhonebookBodyState extends State<_PhonebookBody> {
                           border: Border.all(color: C.dark ? C.border : Colors.white),
                         ),
                         child: Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.start, children: [
-                          Text(groups[i].name, maxLines: 1, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5)),
-                          Text('${groups[i].memberIds.length} people', style: TextStyle(fontSize: 11.5, color: C.muted)),
+                          Text(groups[i].name, maxLines: 1, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+                          Text('${groups[i].memberIds.length} people · ${groups[i].purposeLabel}', style: TextStyle(fontSize: 12, color: C.muted)),
                         ]),
                       ),
                     ),
@@ -542,13 +570,66 @@ class _PhonebookBodyState extends State<_PhonebookBody> {
               const SizedBox(width: 6),
               Flexible(child: Text('Swipe right to edit  ·  swipe left to remove', textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: C.muted, fontWeight: FontWeight.w600))),
             ]),
-          if (shown.isEmpty)
-            const EmptyState(Icons.contacts_rounded, 'No contacts here', 'Add or import customers to start asking.')
-          else
-            _directory(shown),
-          const SizedBox(height: 90),
-        ]),
+                    const SizedBox(height: 10),
+                  ]),
+                ),
+              ),
+              if (shown.isEmpty)
+                const SliverToBoxAdapter(child: Padding(padding: EdgeInsets.symmetric(horizontal: 18), child: EmptyState(Icons.contacts_rounded, 'No contacts here', 'Add or import customers to start asking.')))
+              else
+                for (final l in letters)
+                  SliverMainAxisGroup(slivers: [
+                    SliverPersistentHeader(pinned: true, delegate: _LetterHeader(l, _headerH, headerColor)),
+                    SliverList(
+                      delegate: SliverChildBuilderDelegate(
+                        (context, i) => _row(by[l]![i], last: i == by[l]!.length - 1),
+                        childCount: by[l]!.length,
+                      ),
+                    ),
+                  ]),
+              const SliverToBoxAdapter(child: SizedBox(height: 130)),
+            ],
+          ),
+        ),
       ),
+      if (shown.length >= 6)
+        Positioned(
+          right: 2,
+          top: 120,
+          bottom: 130,
+          // Hidden while the controls at the top fill the screen, so it never sits on top of them.
+          child: AnimatedBuilder(
+            animation: _scroll,
+            builder: (context, _) {
+              final vh = MediaQuery.sizeOf(context).height;
+              final off = _scroll.hasClients ? _scroll.offset : 0.0;
+              final show = off >= _topH - vh * 0.5;
+              return IgnorePointer(
+                ignoring: !show,
+                child: AnimatedOpacity(duration: kFast, opacity: show ? 1 : 0, child: Align(alignment: Alignment.centerRight, child: _indexBar(letters, by))),
+              );
+            },
+          ),
+        ),
+      if (bubble != null)
+        Positioned(
+          right: 44,
+          top: 0,
+          bottom: 0,
+          child: Center(
+            child: Container(
+              width: 68,
+              height: 68,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(24),
+                gradient: const LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: C.gradBlue),
+                boxShadow: [BoxShadow(color: C.primary.withValues(alpha: 0.35), blurRadius: 18, offset: const Offset(0, 8))],
+              ),
+              child: Text(bubble!, style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.w800)),
+            ),
+          ),
+        ),
       if (selecting)
         Positioned(
           left: 18,
@@ -558,4 +639,26 @@ class _PhonebookBodyState extends State<_PhonebookBody> {
         ),
     ]);
   }
+}
+
+/// A letter that stays at the top of the screen while its people scroll underneath, like a phone's contacts.
+class _LetterHeader extends SliverPersistentHeaderDelegate {
+  final String letter;
+  final double height;
+  final Color color;
+  _LetterHeader(this.letter, this.height, this.color);
+  @override
+  double get minExtent => height;
+  @override
+  double get maxExtent => height;
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) => Container(
+        height: height,
+        color: color,
+        padding: const EdgeInsets.only(left: 20),
+        alignment: Alignment.centerLeft,
+        child: Text(letter, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: C.primary)),
+      );
+  @override
+  bool shouldRebuild(covariant _LetterHeader old) => old.letter != letter || old.color != color || old.height != height;
 }

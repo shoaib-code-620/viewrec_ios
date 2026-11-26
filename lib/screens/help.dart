@@ -24,9 +24,9 @@ class HelpScreen extends StatelessWidget {
             child: AppCard(
               onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AssistantScreen())),
               child: const Column(children: [
-                Icon(Icons.auto_awesome_rounded, color: C.primary),
+                Icon(Icons.chat_bubble_outline_rounded, color: C.primary),
                 SizedBox(height: 8),
-                Text('Ask the assistant', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5)),
+                Text('Ask the assistant', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
               ]),
             ),
           ),
@@ -37,7 +37,7 @@ class HelpScreen extends StatelessWidget {
               child: Column(children: [
                 Icon(Icons.call_rounded, color: C.green),
                 SizedBox(height: 8),
-                Text('Talk to our team', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5)),
+                Text('Talk to our team', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
               ]),
             ),
           ),
@@ -58,7 +58,7 @@ class HelpScreen extends StatelessWidget {
                   expandedCrossAxisAlignment: CrossAxisAlignment.start,
                   iconColor: C.primary,
                   collapsedIconColor: C.muted,
-                  title: Text(f.$1, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14.5)),
+                  title: Text(f.$1, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
                   children: [Muted(f.$2, size: 14)],
                 ),
               ),

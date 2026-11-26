@@ -501,7 +501,7 @@ class _CaptionStudioScreenState extends State<CaptionStudioScreen> {
           Field('What is the video about?', controller: _topic, hint: 'Free roof inspections this month'),
           _seg<String>(const [('friendly', 'Friendly'), ('professional', 'Professional'), ('punchy', 'Short and punchy')], tone, (v) => setState(() => tone = v)),
           const SizedBox(height: 10),
-          AppButton(writing ? 'Writing…' : 'Write script with AI', icon: Icons.auto_awesome_rounded, small: true, loading: writing, onTap: writing ? null : _writeScript),
+          AppButton(writing ? 'Writing…' : 'Draft a script', icon: Icons.edit_note_rounded, small: true, loading: writing, onTap: writing ? null : _writeScript),
           const SizedBox(height: 14),
           Field('Your script', controller: _script, lines: 6, hint: 'Write your own, or let AI write it and change it here.', onChanged: (_) => setState(() {})),
           if (_script.text.trim().isNotEmpty) AppButton('Read it while recording', icon: Icons.menu_book_rounded, small: true, style: BtnStyle.ghost, onTap: _readThrough),
@@ -630,7 +630,7 @@ class _CaptionStudioScreenState extends State<CaptionStudioScreen> {
                             margin: const EdgeInsets.all(3),
                             decoration: BoxDecoration(
                               color: (sel.x - x).abs() < 0.08 && (sel.y - y).abs() < 0.08 ? C.primary : C.surface2,
-                              borderRadius: BorderRadius.circular(9),
+                              borderRadius: BorderRadius.circular(8),
                               border: Border.all(color: C.border),
                             ),
                           ),
@@ -682,7 +682,7 @@ class _CaptionStudioScreenState extends State<CaptionStudioScreen> {
                 child: Column(children: [
                   Icon(_tabs[i].$1, size: 21, color: tab == i ? Colors.white : C.muted),
                   const SizedBox(height: 2),
-                  Text(_tabs[i].$2, style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w800, color: tab == i ? Colors.white : C.muted)),
+                  Text(_tabs[i].$2, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: tab == i ? Colors.white : C.muted)),
                 ]),
               ),
             ),
@@ -800,7 +800,7 @@ class _LineEditorState extends State<_LineEditor> {
                 child: Row(mainAxisSize: MainAxisSize.min, children: [
                   Icon(Icons.schedule_rounded, size: 13, color: C.primary),
                   const SizedBox(width: 5),
-                  Text('${_clock(widget.line.startMs)} - ${_clock(widget.line.endMs)}', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w800, color: C.primary)),
+                  Text('${_clock(widget.line.startMs)} - ${_clock(widget.line.endMs)}', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: C.primary)),
                 ]),
               ),
             ),
@@ -815,7 +815,7 @@ class _LineEditorState extends State<_LineEditor> {
               widget.line.text = v;
               widget.onChanged();
             },
-            style: const TextStyle(fontSize: 14.5, height: 1.35),
+            style: const TextStyle(fontSize: 15, height: 1.35),
             decoration: const InputDecoration(border: InputBorder.none, isDense: true, hintText: 'What is said here', contentPadding: EdgeInsets.fromLTRB(0, 6, 8, 6)),
           ),
         ]),

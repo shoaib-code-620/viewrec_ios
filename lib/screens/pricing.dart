@@ -73,11 +73,11 @@ class PlanTicket extends StatelessWidget {
                 borderRadius: BorderRadius.circular(999),
                 boxShadow: [BoxShadow(color: const Color(0xFFF2A100).withValues(alpha: 0.4), blurRadius: 10, offset: const Offset(0, 4))],
               ),
-              child: const Text('Recommended', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w800, color: Color(0xFF0B1B3A))),
+              child: const Text('Recommended', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: Color(0xFF0B1B3A))),
             ),
         ]),
         const SizedBox(height: 4),
-        Text(p.blurb as String, style: TextStyle(fontSize: 13.5, color: sub, height: 1.4)),
+        Text(p.blurb as String, style: TextStyle(fontSize: 14, color: sub, height: 1.4)),
         const SizedBox(height: 18),
         Text.rich(TextSpan(
           text: '\$$price',

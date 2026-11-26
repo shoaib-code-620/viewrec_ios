@@ -58,9 +58,9 @@ class BillingScreen extends StatelessWidget {
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 8),
                     child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                      Text(u.label, style: const TextStyle(fontSize: 14.5)),
+                      Text(u.label, style: const TextStyle(fontSize: 15)),
                       Text.rich(TextSpan(text: '${u.used}', style: const TextStyle(fontWeight: FontWeight.w800), children: [
-                        TextSpan(text: ' / ${u.limit}', style: TextStyle(color: C.muted, fontWeight: FontWeight.w500, fontSize: 12.5)),
+                        TextSpan(text: ' / ${u.limit}', style: TextStyle(color: C.muted, fontWeight: FontWeight.w500, fontSize: 13)),
                       ])),
                     ]),
                   ),

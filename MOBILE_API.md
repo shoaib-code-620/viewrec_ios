@@ -544,7 +544,21 @@ These wrap the website's existing public review routes so the phone and the webs
 
 **A6. PATCH and DELETE /customers/:id** are described at endpoints 26 and 26b (edit and remove from the phonebook; the app always confirms before removing).
 
-**A7. Groups** reuse the existing `/bundles` endpoints. The Phonebook screen creates a bundle from the people the user ticks.
+**A7. Groups** reuse the existing `/bundles` endpoints. The Phonebook screen creates a bundle from the people the user ticks. A bundle now also carries `purpose` (`offer` for people who already bought, `approach` for people who have not) and an optional `note`: `POST /bundles { name, memberIds, purpose, note }`. There is no 10 to 20 member rule any more (the website shows a group of 2).
+
+**A8. Invitations sent.** `GET /customers` returns, for each customer, `sentOn` (display date of the invitation, for example `"29 Oct"`) and `nudges` (how many reminders went out). `POST /customers/:id/remind` returns `{ "nudges": 3 }`. The app lists customers with status `invited` or `recorded` under Business Phonebook > Invitations sent.
+
+**A9. Reminders.** `POST /reminders { "date": "2026-11-27", "about": "Call the Hendersons about their review", "repeatEveryDays": 7 }` (the repeat is optional). Reminders appear in `GET /calendar` with `kind: "reminder"` and `who: "Reminder to you"`. The app opens this form from the Calendar (Set reminder) and from Automations (Remind me).
+
+**A11. Publishing destinations.** `GET /publishing/destinations` returns `[{ id, kind, name, url, secret }]`. `kind` is `website` (a webhook: `url` required, the app shows `secret` so the site can verify the signature) or the id of a platform posted by hand (`fb`, `ig`, `threads`, `li`, `yt`, `tt`, `pin`, `x`, `google`). `POST /publishing/destinations { kind, name, url? }` returns the new destination, `DELETE /publishing/destinations/:id` removes it. For a website, every approved testimonial is POSTed as JSON with the header `X-ViewRec-Signature` (HMAC-SHA256 of the body with the secret). The "Where they go" tab also reads `GET /accounts` (which channels are connected), `GET /videos` (approved ones are "ready") and `GET /verification`.
+
+**A12. Team access (Admin control).** `GET /team` returns `[{ id, name, email, access, pending }]` where `access` maps a section key to `none`, `view` or `edit`. The section keys are `testimonials`, `create`, `gallery`, `phonebook`, `leads`, `automations`, `pages`, `publishing`, `accounts`, `clients`; Overview is always included, and Plan & billing, Settings and Admin control are never shared. `POST /team { name, email, access, method: "invite" | "password", password? }` (a team holds up to 10; `invite` emails a link to choose a password, `password` emails the invitation with the owner's password), `PUT /team/:id { access }`, `DELETE /team/:id`. View must make every endpoint of that section read-only for that person (403 on writes).
+
+**A13. Scheduled items and run history.** `POST /bundles/:id/schedule { date, subject, body }` schedules a group email (opted-out people are skipped, no review link), `DELETE /scheduled/:id` cancels a reminder or scheduled email, and both appear in `GET /calendar` with `mine: true`. `GET /calendar` also lists what already ran, which the app shows under Automations > Scheduled > Run history.
+
+**A14. Testimonial details.** `GET /videos` (and the single-video read) add `template`, `submitted`, `consent` (`["Website","Social media","Marketing"]`), `captureVerified`, `captureSignals` and `captureNotes` (lists of short sentences), `transcript` and `aiSummary`. `PATCH /videos/:id { transcript }` saves a corrected transcript.
+
+**A10. Message reactions. `PUT /leads/:id/messages/:messageId/reaction { "emoji": "👍" }` and `DELETE` to take it back; the same for Support at `/support/thread/messages/:messageId/reaction`. Messages carry `reactions: { "you": "👍", "them": "❤️" }` (either may be missing). The other person's reaction arrives on the next poll.
 
 ---
 
