@@ -79,12 +79,17 @@ class PostsData {
 
 class AppNotification {
   final String id, kind, title, subtitle; // kind: video | suggestion | views | invite | lead
-  const AppNotification({required this.id, required this.kind, required this.title, required this.subtitle});
+  /// The video or request it is about, so a tap can open it.
+  final String? refId;
+  bool read;
+  AppNotification({required this.id, required this.kind, required this.title, required this.subtitle, this.refId, this.read = false});
   factory AppNotification.fromJson(Map<String, dynamic> j) => AppNotification(
         id: '${j['id']}',
         kind: j['kind'] ?? 'video',
         title: j['title'] ?? '',
         subtitle: j['subtitle'] ?? '',
+        refId: j['refId'] == null ? null : '${j['refId']}',
+        read: j['read'] == true,
       );
 }
 

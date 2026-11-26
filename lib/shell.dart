@@ -68,6 +68,7 @@ class Shell extends StatefulWidget {
 class ShellState extends State<Shell> {
   late int index = widget.initialIndex;
   int unread = 0; // new conversations, shown on the message icon
+  int unreadNotifications = 0; // shown on the bell
   bool _exitArmed = false; // after one Back press on Home, a second one within 2 seconds leaves the app
   Timer? _exitTimer;
 
@@ -77,9 +78,16 @@ class ShellState extends State<Shell> {
     super.dispose();
   }
 
+  void _loadUnreadNotifications() {
+    repo.notifications().then((l) {
+      if (mounted) setState(() => unreadNotifications = l.where((n) => !n.read).length);
+    }).catchError((_) {});
+  }
+
   @override
   void initState() {
     super.initState();
+    _loadUnreadNotifications();
     repo.leads().then((l) {
       if (mounted) setState(() => unread = l.where((x) => x.status == 'new').length);
     }).catchError((_) {});
@@ -269,8 +277,8 @@ class ShellState extends State<Shell> {
           reduceMotion(context)
               ? Icon(PIconsRegular.bell, size: 19, color: C.text)
               : Icon(PIconsRegular.bell, size: 19, color: C.text).animate(key: const ValueKey('bell'), delay: 1400.ms).shake(hz: 4, rotation: 0.28, duration: 700.ms, curve: Curves.easeOut),
-          () => push(const NotificationsScreen()),
-          badge: 3,
+          () => push(NotificationsScreen(shell: this)).then((_) => _loadUnreadNotifications()),
+          badge: unreadNotifications > 0 ? unreadNotifications : null,
         ),
         const SizedBox(width: 10),
         _round(Icon(Icons.chat_bubble_outline_rounded, size: 19, color: C.text), () => push(const InboxScreen()).then((_) => repo.leads().then((l) {

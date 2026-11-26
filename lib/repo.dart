@@ -72,6 +72,8 @@ abstract class Repo {
   Future<void> disconnectAccount(String platformId);
 
   Future<List<AppNotification>> notifications();
+  Future<void> markNotificationRead(String id);
+  Future<void> markAllNotificationsRead();
   Future<BillingInfo> billing();
 
   Future<AutomationSettings> automations();
@@ -506,13 +508,32 @@ class MockRepo implements Repo {
     await _wait(null);
   }
 
+  final _notifications = [
+    AppNotification(id: 'n0', kind: 'lead', title: 'Rebecca Shaw sent a request', subtitle: 'Roof inspection · 12 min ago', refId: 'l1'),
+    AppNotification(id: 'n1', kind: 'video', title: 'Lena Fischer recorded a video', subtitle: 'Ready for your approval · 2h ago', refId: 'v1'),
+    AppNotification(id: 'n2', kind: 'suggestion', title: '2 customers suggested', subtitle: 'Approve before invitations go out · 5h ago'),
+    AppNotification(id: 'n3', kind: 'views', title: "Priya Nair's video hit 1,000 views", subtitle: 'On Google and your website · 1d ago', refId: 'v2', read: true),
+    AppNotification(id: 'n4', kind: 'invite', title: 'Invitation sent to Tom Hendricks', subtitle: 'Reminder goes out in 3 days · 2d ago', read: true),
+  ];
+
   @override
-  Future<List<AppNotification>> notifications() => _wait(const [
-        AppNotification(id: 'n1', kind: 'video', title: 'Lena Fischer recorded a video', subtitle: 'Ready for your approval · 2h ago'),
-        AppNotification(id: 'n2', kind: 'suggestion', title: '2 customers suggested', subtitle: 'Approve before invitations go out · 5h ago'),
-        AppNotification(id: 'n3', kind: 'views', title: "Priya Nair's video hit 1,000 views", subtitle: 'On Google and your website · 1d ago'),
-        AppNotification(id: 'n4', kind: 'invite', title: 'Invitation sent to Tom Hendricks', subtitle: 'Reminder goes out in 3 days · 2d ago'),
-      ]);
+  Future<List<AppNotification>> notifications() => _wait(List.of(_notifications));
+
+  @override
+  Future<void> markNotificationRead(String id) async {
+    for (final n in _notifications.where((n) => n.id == id)) {
+      n.read = true;
+    }
+    await _wait(null);
+  }
+
+  @override
+  Future<void> markAllNotificationsRead() async {
+    for (final n in _notifications) {
+      n.read = true;
+    }
+    await _wait(null);
+  }
 
   @override
   Future<BillingInfo> billing() => _wait(const BillingInfo(
@@ -805,6 +826,12 @@ class ApiRepo implements Repo {
 
   @override
   Future<List<AppNotification>> notifications() async => (await _get('/api/v1/notifications') as List).map((e) => AppNotification.fromJson(e)).toList();
+
+  @override
+  Future<void> markNotificationRead(String id) => _send('POST', '/api/v1/notifications/$id/read');
+
+  @override
+  Future<void> markAllNotificationsRead() => _send('POST', '/api/v1/notifications/read-all');
 
   @override
   Future<BillingInfo> billing() async => BillingInfo.fromJson(await _get('/api/v1/billing'));
