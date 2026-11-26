@@ -41,9 +41,7 @@ class _CreateContentScreenState extends State<CreateContentScreen> {
             border: Border.all(color: Colors.white.withValues(alpha: 0.35)),
             boxShadow: [BoxShadow(color: g.last.withValues(alpha: 0.35), blurRadius: 22, offset: const Offset(0, 10))],
           ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(16),
-            child: Stack(children: [
+          child: Stack(children: [
               wide
                   ? Row(children: [
                       Container(
@@ -74,7 +72,6 @@ class _CreateContentScreenState extends State<CreateContentScreen> {
                       Text(sub, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: Colors.white.withValues(alpha: 0.85), fontSize: 12)),
                     ]),
             ]),
-          ),
         ),
       );
 

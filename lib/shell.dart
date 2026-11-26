@@ -78,6 +78,14 @@ class ShellState extends State<Shell> {
     super.dispose();
   }
 
+  /// The numbers on the message icon and the bell, read again (after a request changes status, for example).
+  void refreshBadges() {
+    repo.leads().then((l) {
+      if (mounted) setState(() => unread = l.where((x) => x.status == 'new').length);
+    }).catchError((_) {});
+    _loadUnreadNotifications();
+  }
+
   void _loadUnreadNotifications() {
     repo.notifications().then((l) {
       if (mounted) setState(() => unreadNotifications = l.where((n) => !n.read).length);

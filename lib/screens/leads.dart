@@ -6,6 +6,7 @@ import '../models.dart';
 import '../motion.dart';
 import '../repo.dart';
 import '../theme.dart';
+import '../shell.dart';
 import '../widgets.dart';
 
 class LeadsScreen extends StatelessWidget {
@@ -25,6 +26,49 @@ class _LeadsBody extends StatefulWidget {
   State<_LeadsBody> createState() => _LeadsBodyState();
 }
 
+/// A status and how many requests are in it. The number counts up or down when it changes.
+class _CountTile extends StatelessWidget {
+  final String label;
+  final int count;
+  final Color color;
+  final bool active;
+  final VoidCallback onTap;
+  const _CountTile({required this.label, required this.count, required this.color, required this.active, required this.onTap});
+  @override
+  Widget build(BuildContext context) => Expanded(
+        child: Pressable(
+          onTap: onTap,
+          child: AnimatedContainer(
+            duration: kMed,
+            curve: kCurve,
+            margin: const EdgeInsets.symmetric(horizontal: 3),
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            decoration: BoxDecoration(
+              gradient: active ? const LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: C.gradBlue) : null,
+              color: active ? null : (C.dark ? C.surface : Colors.white.withValues(alpha: 0.85)),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: active ? Colors.white.withValues(alpha: 0.4) : (C.dark ? C.border : Colors.white)),
+              boxShadow: active ? [BoxShadow(color: C.primary.withValues(alpha: 0.3), blurRadius: 14, offset: const Offset(0, 6))] : C.shadow,
+            ),
+            child: Column(children: [
+              TweenAnimationBuilder<double>(
+                tween: Tween(begin: count.toDouble(), end: count.toDouble()),
+                duration: const Duration(milliseconds: 450),
+                curve: kCurve,
+                builder: (context, v, _) => Text('${v.round()}', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, letterSpacing: -0.6, color: active ? Colors.white : C.text)),
+              ),
+              const SizedBox(height: 2),
+              Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                Container(width: 7, height: 7, decoration: BoxDecoration(shape: BoxShape.circle, color: active ? Colors.white : color)),
+                const SizedBox(width: 5),
+                Flexible(child: FittedBox(fit: BoxFit.scaleDown, child: Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: active ? Colors.white70 : C.muted)))),
+              ]),
+            ]),
+          ),
+        ),
+      );
+}
+
 class _LeadsBodyState extends State<_LeadsBody> {
   late final List<Lead> leads = widget.leads;
   int tab = 0;
@@ -36,11 +80,13 @@ class _LeadsBodyState extends State<_LeadsBody> {
   Future<void> _setStatus(Lead l, String s) async {
     final prev = l.status;
     setState(() => l.status = s);
+    context.findAncestorStateOfType<ShellState>()?.refreshBadges();
     try {
       await repo.setLeadStatus(l.id, s);
     } catch (e) {
       if (mounted) {
         setState(() => l.status = prev);
+        context.findAncestorStateOfType<ShellState>()?.refreshBadges();
         showMsg(context, "Couldn't update the lead. Try again.");
       }
     }
@@ -103,10 +149,16 @@ class _LeadsBodyState extends State<_LeadsBody> {
       child: AppPage(children: [
         const Muted('Requests from your directory listing, review page and website. Reply fast to win the job. Hold a request and drag it to a status at the top to move it.'),
         const SizedBox(height: 14),
+        // One count for every status, so moving a request to any of them shows at once. Tap one to filter.
         Row(children: [
-          Expanded(child: StatCard(icon: Icons.mark_email_unread_rounded, label: 'New', value: '${leads.where((l) => l.status == 'new').length}')),
-          const SizedBox(width: 12),
-          Expanded(child: StatCard(icon: Icons.emoji_events_rounded, label: 'Won', value: '${leads.where((l) => l.status == 'won').length}')),
+          for (var i = 1; i < tabs.length; i++)
+            _CountTile(
+              label: tabs[i],
+              count: leads.where((l) => l.status == tabs[i].toLowerCase()).length,
+              color: _c(tabs[i].toLowerCase()),
+              active: tab == i,
+              onTap: () => setState(() => tab = tab == i ? 0 : i),
+            ),
         ]),
         const SizedBox(height: 16),
         Pills(tabs, tab, (i) => setState(() => tab = i)),
