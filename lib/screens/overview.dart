@@ -53,6 +53,7 @@ class OverviewScreen extends StatelessWidget {
         const SizedBox(height: 6),
       ],
       EntitlementBanner(onBilling: () => shell.goTo(9)),
+      Padding(padding: const EdgeInsets.only(left: 4, bottom: 12), child: Text(_message(s), style: TextStyle(fontSize: 15, height: 1.4, color: C.muted, fontWeight: FontWeight.w600))),
       _hero(context, s).reveal(context, n++),
       const SizedBox(height: 18),
       _quickActions(context).reveal(context, n++),
@@ -98,6 +99,14 @@ class OverviewScreen extends StatelessWidget {
         ]),
       ).reveal(context, n++),
     ]);
+  }
+
+  /// "Good morning. 2 testimonials are waiting for you." Says what needs attention today.
+  String _message(OverviewStats s) {
+    final h = DateTime.now().hour;
+    final greeting = h < 5 ? 'Good night' : h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
+    final what = s.waiting > 0 ? '${s.waiting} ${s.waiting == 1 ? 'testimonial is' : 'testimonials are'} waiting for your approval.' : 'You are all caught up.';
+    return '$greeting. $what';
   }
 
   // ---------- hero ----------

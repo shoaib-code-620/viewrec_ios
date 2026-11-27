@@ -19,7 +19,7 @@ class SettingsScreen extends StatelessWidget {
   void _go(BuildContext c, Widget w) => Navigator.of(c).push(MaterialPageRoute(builder: (_) => w));
 
   static String _themeLabel(AppThemeMode m) => switch (m) {
-        AppThemeMode.system => 'Automatic (follows your phone)',
+        AppThemeMode.special => 'Special (airy by day, glassy at night)',
         AppThemeMode.light => 'Light',
         AppThemeMode.dark => 'Dark',
       };
@@ -31,7 +31,7 @@ class SettingsScreen extends StatelessWidget {
       Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         const H2('Appearance'),
         const SizedBox(height: 4),
-        const Muted('Choose how ViewRec looks. Automatic switches with your phone.', size: 13),
+        const Muted('Choose how ViewRec looks. Special is a richer look that is airy by day and glassy at night, following your phone.', size: 13),
         const SizedBox(height: 12),
         for (final m in AppThemeMode.values)
           InkWell(
@@ -43,7 +43,7 @@ class SettingsScreen extends StatelessWidget {
               padding: const EdgeInsets.symmetric(vertical: 12),
               child: Row(children: [
                 Icon(
-                  switch (m) { AppThemeMode.system => Icons.phone_android_rounded, AppThemeMode.light => Icons.light_mode_rounded, AppThemeMode.dark => Icons.dark_mode_rounded },
+                  switch (m) { AppThemeMode.special => Icons.auto_awesome_rounded, AppThemeMode.light => Icons.light_mode_rounded, AppThemeMode.dark => Icons.dark_mode_rounded },
                   color: C.primary,
                 ),
                 const SizedBox(width: 14),

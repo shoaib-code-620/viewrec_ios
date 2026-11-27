@@ -6,6 +6,7 @@ import '../models.dart';
 import '../repo.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import 'media_insights.dart';
 
 /// How your testimonials are performing: views over time, where they're watched, and reply rate.
 class InsightsScreen extends StatelessWidget {
@@ -32,6 +33,22 @@ class InsightsScreen extends StatelessWidget {
                   return RefreshIndicator(
                     onRefresh: refresh,
                     child: ListView(padding: const EdgeInsets.fromLTRB(16, 8, 16, 32), children: [
+                      AppCard(
+                        onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const MediaInsightsScreen())),
+                        child: Row(children: [
+                          const GlossIcon(Icons.perm_media_rounded, Color(0xFFE1306C), size: 44),
+                          const SizedBox(width: 14),
+                          const Expanded(
+                            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                              Text('Media insights', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+                              SizedBox(height: 2),
+                              Muted('Reach, interactions, followers and your best posts', size: 13),
+                            ]),
+                          ),
+                          Icon(Icons.chevron_right_rounded, color: C.muted),
+                        ]),
+                      ),
+                      const SizedBox(height: 14),
                       Row(children: [
                         Expanded(child: StatCard(icon: Icons.visibility_rounded, label: 'Views', value: _k(d.totalViews), delta: growth >= 0 ? '+$growth% this week' : '$growth% this week')),
                         const SizedBox(width: 12),

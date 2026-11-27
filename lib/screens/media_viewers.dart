@@ -220,6 +220,46 @@ class _StoryViewerState extends State<StoryViewer> with SingleTickerProviderStat
                 ]),
               ),
               const Spacer(),
+              if (!group.mine)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(14, 0, 14, 10),
+                  child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                    for (final e in const ['❤️', '🔥', '👏', '😮', '😂', '😢'])
+                      GestureDetector(
+                        key: ValueKey('react_$e'),
+                        behavior: HitTestBehavior.opaque,
+                        onTap: () {
+                          HapticFeedback.lightImpact();
+                          showMsg(context, 'You sent $e');
+                        },
+                        child: Padding(padding: const EdgeInsets.all(6), child: Text(e, style: const TextStyle(fontSize: 26))),
+                      ),
+                  ]),
+                ),
+              if (group.mine && group.items.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(14, 0, 14, 20),
+                  child: GestureDetector(
+                    key: const ValueKey('seen_by'),
+                    onTap: () => showSheet(
+                      context,
+                      Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        const H2('Seen by 14'),
+                        const SizedBox(height: 10),
+                        for (final n in const ['Emma Clarke', 'Liam Foster', 'Chloe Bennett', 'Lena Fischer', 'Hannah Price'])
+                          Padding(padding: const EdgeInsets.symmetric(vertical: 6), child: Row(children: [Avatar(n, size: 36), const SizedBox(width: 12), Text(n, style: const TextStyle(fontWeight: FontWeight.w700))])),
+                        const SizedBox(height: 6),
+                        const Muted('and 9 more', size: 13),
+                      ]),
+                    ),
+                    child: Row(children: [
+                      const Icon(Icons.remove_red_eye_rounded, color: Colors.white, size: 20),
+                      const SizedBox(width: 8),
+                      Text('Seen by 14', style: TextStyle(color: Colors.white.withValues(alpha: 0.9), fontWeight: FontWeight.w700)),
+                    ]),
+                  ),
+                )
+              else
               Padding(
                 padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
                 child: Row(children: [
@@ -441,7 +481,7 @@ class _ReelPageState extends State<_ReelPage> with SingleTickerProviderStateMixi
                 ),
               ]),
               const SizedBox(height: 12),
-              Text(r.caption, maxLines: 3, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 15, height: 1.4, color: Colors.white, fontWeight: FontWeight.w500)),
+              CaptionText(name: r.business, text: r.caption, onDark: true, size: 15),
               const SizedBox(height: 10),
               Row(children: [
                 for (var k = 0; k < 5; k++) Icon(k < r.rating ? Icons.star_rounded : Icons.star_outline_rounded, size: 15, color: const Color(0xFFFFC21A)),

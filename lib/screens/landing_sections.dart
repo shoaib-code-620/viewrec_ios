@@ -388,7 +388,7 @@ class _LandingSectionsState extends State<LandingSections> {
         _eyebrow('PRICING', C.primary),
         _h('Choose how much we do for you', size: 32),
         const SizedBox(height: 18),
-        for (final p in plans) Padding(padding: const EdgeInsets.only(bottom: 18), child: PlanTicket(plan: p, yearly: false)),
+        for (final p in plans.where((p) => !p.custom)) Padding(padding: const EdgeInsets.only(bottom: 18), child: PlanTicket(plan: p, yearly: false)),
         AppCard(
           padding: const EdgeInsets.all(22),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

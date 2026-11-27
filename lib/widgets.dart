@@ -237,15 +237,21 @@ class AppCard extends StatelessWidget {
             ? LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
-                colors: C.dark
-                    ? [C.surface, C.surface]
-                    : [Colors.white.withValues(alpha: 0.94), Colors.white.withValues(alpha: 0.78)],
+                colors: C.special
+                    ? (C.dark
+                        ? [Colors.white.withValues(alpha: 0.13), Colors.white.withValues(alpha: 0.05)]
+                        : [Colors.white.withValues(alpha: 0.86), Colors.white.withValues(alpha: 0.58)])
+                    : C.dark
+                        ? [C.surface, C.surface]
+                        : [Colors.white.withValues(alpha: 0.94), Colors.white.withValues(alpha: 0.78)],
               )
             : null,
         color: borderColor != null ? C.surface : null,
         borderRadius: BorderRadius.circular(rLg + 4),
-        border: Border.all(color: borderColor ?? (C.dark ? C.border : Colors.white.withValues(alpha: 0.9)), width: borderWidth),
-        boxShadow: C.dark
+        border: Border.all(color: borderColor ?? (C.special ? Colors.white.withValues(alpha: C.dark ? 0.22 : 0.95) : (C.dark ? C.border : Colors.white.withValues(alpha: 0.9))), width: borderWidth),
+        boxShadow: C.special && C.dark
+            ? [BoxShadow(color: const Color(0xFF6D5DE7).withValues(alpha: 0.18), blurRadius: 30, offset: const Offset(0, 12))]
+            : C.dark
             ? C.shadow
             : [
                 BoxShadow(color: const Color(0xFF0B1B3A).withValues(alpha: 0.05), blurRadius: 3, offset: const Offset(0, 2)),

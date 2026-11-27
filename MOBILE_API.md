@@ -560,6 +560,14 @@ These wrap the website's existing public review routes so the phone and the webs
 
 **A10. Message reactions. `PUT /leads/:id/messages/:messageId/reaction { "emoji": "👍" }` and `DELETE` to take it back; the same for Support at `/support/thread/messages/:messageId/reaction`. Messages carry `reactions: { "you": "👍", "them": "❤️" }` (either may be missing). The other person's reaction arrives on the next poll.
 
+**A15. Profile highlights.** `GET /profiles/:handle` also returns `highlights: [{ id, title, hue, items: [{ text, hue, mediaUrl?, isVideo? }] }]`, saved stories shown as round covers on the profile. The "Followed by" line on a profile uses `GET /profiles/:handle/followers` (the first few entries and the `followers` count).
+
+**A16. Plan & billing.** `GET /billing` also returns `cardLabel` (for example "Visa ending 4242"), `stopped` (bool), `endsOn` (date text, when stopped) and payments as `invoices: [{ title, amount, date, status: "paid"|"pending" }]`. New calls: `PUT /billing/plan { planId: "std"|"pro"|"plus" }` to change plan; `POST /billing/stop` and `POST /billing/resume` for the subscription (a stopped plan keeps running until `endsOn`); `POST /billing/card { number, name, expiry: "MM/YY", cvc }` saves a card typed in the app's short form (HTTPS only; pass it straight to the payment provider and keep only the brand and last four digits, never log or store the number or code; if the provider requires its own hosted fields, tell us and the form will switch to `POST /billing/card-setup` returning `{ url }`); `DELETE /billing/card` removes the card. Managed Services has no `planId`: it is arranged with the team.
+
+**A17. Avatar.** The video upload field `avatar` is a preset id (`fox`, `owl`, ...) or `me:skin,hairStyle,hairColor,eyes,glasses,top` (six small numbers) for a face the customer built to look like themselves. In the app the avatar replaces the face on screen from the moment recording starts and moves its mouth while the person speaks; the server should draw the same avatar over the final video.
+
+**A18. Media insights.** `GET /insights/media?days=7|30|90` returns `{ days, reach, reachDelta (percent vs the period before), impressions, profileVisits, linkTaps, likes, comments, saves, shares, followers, followersGained, followersLost, daily: [reach per day, oldest first], pctFollowers (share of reach from followers), topPosts: [{ title, kind: "reel"|"post", reach, likes, comments, hue }], topPlaces: [{ platform, views }] }`.
+
 ---
 
 ## 4. Values used by the app

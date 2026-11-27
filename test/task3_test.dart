@@ -23,7 +23,7 @@ Future<void> _pumpFor(WidgetTester t, int ms) async {
 Future<void> _openSearch(WidgetTester t) async {
   await t.pumpWidget(MaterialApp(theme: buildTheme(dark: false), home: const Shell(initialIndex: 0)));
   await _pumpFor(t, 2500);
-  await t.tap(find.byIcon(Icons.search_rounded));
+  await t.tap(find.byIcon(Icons.search_rounded).first);
   await _pumpFor(t, 1200);
 }
 

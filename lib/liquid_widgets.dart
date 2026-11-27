@@ -17,7 +17,7 @@ class LiquidBackdrop extends StatefulWidget {
 }
 
 class _LiquidBackdropState extends State<LiquidBackdrop> with SingleTickerProviderStateMixin {
-  late final AnimationController _c = AnimationController(vsync: this, duration: const Duration(seconds: 24))..repeat();
+  late final AnimationController _c = AnimationController(vsync: this, duration: Duration(seconds: C.special ? 14 : 24))..repeat();
   @override
   void dispose() {
     _c.dispose();
@@ -31,7 +31,7 @@ class _LiquidBackdropState extends State<LiquidBackdrop> with SingleTickerProvid
       child: RepaintBoundary(
         child: AnimatedBuilder(
           animation: _c,
-          builder: (context, _) => CustomPaint(painter: _BackdropPainter(still ? 0.2 : _c.value, C.dark), size: Size.infinite),
+          builder: (context, _) => CustomPaint(painter: _BackdropPainter(still ? 0.2 : _c.value, C.dark, C.special), size: Size.infinite),
         ),
       ),
     );
@@ -40,8 +40,8 @@ class _LiquidBackdropState extends State<LiquidBackdrop> with SingleTickerProvid
 
 class _BackdropPainter extends CustomPainter {
   final double t;
-  final bool dark;
-  _BackdropPainter(this.t, this.dark);
+  final bool dark, special;
+  _BackdropPainter(this.t, this.dark, [this.special = false]);
   @override
   void paint(Canvas canvas, Size size) {
     final w = size.width, h = size.height;
@@ -52,14 +52,19 @@ class _BackdropPainter extends CustomPainter {
     }
 
     // The design's soft glows: teal at the top right, yellow on the left, coral at the bottom right.
-    final k = dark ? 0.55 : 1.0;
+    final k = (dark ? 0.55 : 1.0) * (special ? 1.5 : 1.0);
+    if (special) {
+      // Special mode: more, larger glows that drift further, so the page seems to breathe.
+      pool(Offset(w * (0.5 + 0.35 * math.sin(a * 0.7)), h * (0.18 + 0.12 * math.cos(a))), w * 0.9, dark ? const Color(0xFF6D5DE7) : const Color(0xFFB9A8FF), dark ? 0.30 : 0.32);
+      pool(Offset(w * (0.2 + 0.25 * math.cos(a * 0.9)), h * (0.64 + 0.1 * math.sin(a * 1.2))), w * 0.85, dark ? const Color(0xFF1FA0C9) : const Color(0xFF9EE7FF), dark ? 0.26 : 0.34);
+    }
     pool(Offset(w * (1.0 + 0.06 * math.sin(a)), h * (0.10 + 0.04 * math.cos(a * 1.3))), w * 0.80, const Color(0xFF3DE0BC), 0.18 * k);
     pool(Offset(w * (0.0 + 0.06 * math.cos(a * 0.8)), h * (0.46 + 0.06 * math.sin(a))), w * 0.78, const Color(0xFFFFC21A), 0.18 * k);
     pool(Offset(w * (1.0 + 0.05 * math.sin(a * 1.1 + 1)), h * (0.80 + 0.04 * math.cos(a))), w * 0.75, const Color(0xFFFF6B5E), 0.14 * k);
   }
 
   @override
-  bool shouldRepaint(_BackdropPainter o) => o.t != t || o.dark != dark;
+  bool shouldRepaint(_BackdropPainter o) => o.t != t || o.dark != dark || o.special != special;
 }
 
 /// A progress bar that fills like liquid: the leading edge ripples gently and a soft light drifts through it.

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui' as ui;
 import 'package:animations/animations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -10,6 +11,8 @@ import 'order_store.dart';
 import 'theme.dart';
 import 'theme_controller.dart';
 import 'widgets.dart';
+import 'screens/media_explore.dart';
+import 'screens/media_viewers.dart';
 import 'screens/overview.dart';
 import 'screens/search.dart';
 import 'screens/testimonials.dart';
@@ -28,7 +31,6 @@ import 'screens/invite_composer.dart';
 import 'screens/record.dart';
 import 'screens/help.dart';
 import 'screens/inbox.dart';
-import 'screens/media.dart';
 import 'screens/media_widgets.dart';
 import 'screens/gallery.dart';
 import 'screens/templates.dart';
@@ -68,6 +70,8 @@ class Shell extends StatefulWidget {
 class ShellState extends State<Shell> {
   late int index = widget.initialIndex;
   int unread = 0; // new conversations, shown on the message icon
+  /// Which part of Media the Instagram-style bar shows: 0 feed, 1 explore, 3 your profile (2 is Reels, which opens full screen).
+  int mediaTab = 0;
   int unreadNotifications = 0; // shown on the bell
   bool _exitArmed = false; // after one Back press on Home, a second one within 2 seconds leaves the app
   Timer? _exitTimer;
@@ -114,12 +118,12 @@ class ShellState extends State<Shell> {
     Section('Your pages', 'Review page, listing, website', PIconsRegular.browsers, PIconsFill.browsers, const Color(0xFF1FC9A4), (s) => const YourPagesScreen()),
     Section('Publishing', 'Posts and schedule', PIconsRegular.rocketLaunch, PIconsFill.rocketLaunch, const Color(0xFF0B5FC4), (s) => const PublishingTabs()),
     Section('Connected accounts', 'Google, Facebook and more', PIconsRegular.shareNetwork, PIconsFill.shareNetwork, const Color(0xFF3E94F5), (s) => const ConnectedAccountsScreen()),
-    Section('Plan & billing', 'Your plan and invoices', PIconsRegular.creditCard, PIconsFill.creditCard, const Color(0xFF0FA386), (s) => const BillingScreen()),
+    Section('Plan & billing', 'Your plan and invoices', PIconsRegular.creditCard, PIconsFill.creditCard, const Color(0xFF0FA386), (s) => const BillingTabs()),
     Section('Settings', 'Profile, branding, privacy', PIconsRegular.gear, PIconsFill.gear, const Color(0xFF8A9BB8), (s) => const SettingsScreen()),
     Section('Admin control', 'Staff tools', PIconsRegular.shieldCheck, PIconsFill.shieldCheck, const Color(0xFFE4513F), (s) => const AdminScreen()),
     Section('Additional services', 'Rewards, ads, referrals', PIconsRegular.stack, PIconsFill.stack, const Color(0xFFFF6B5E), (s) => const AdditionalServicesScreen()),
     Section('More', 'Everything else', PIconsRegular.dotsNine, PIconsFill.dotsNine, C.primary, (s) => _MoreGrid(shell: s)),
-    Section('Media', 'Stories and reels', PIconsRegular.playCircle, PIconsFill.playCircle, const Color(0xFFFF6B5E), (s) => const MediaScreen()),
+    Section('Media', 'Stories and reels', PIconsRegular.playCircle, PIconsFill.playCircle, const Color(0xFFFF6B5E), (s) => MediaHome(shell: s)),
     Section('Gallery', 'Your videos, pictures and documents', Icons.photo_library_outlined, Icons.photo_library_rounded, const Color(0xFF3E94F5), (s) => const GalleryScreen()),
     Section('Contact bundles', 'Email a group of customers', Icons.groups_outlined, Icons.groups_rounded, const Color(0xFF0B5FC4), (s) => const PhonebookTabs(initial: 2)),
     Section('Calendar', 'What is going out and when', Icons.calendar_month_outlined, Icons.calendar_month_rounded, const Color(0xFF0FA386), (s) => const PhonebookTabs(initial: 3)),
@@ -137,6 +141,7 @@ class ShellState extends State<Shell> {
 
   void goTo(int i) {
     if (i == index) return;
+    mediaTab = 0;
     HapticFeedback.selectionClick();
     setState(() {
       index = i;
@@ -166,6 +171,10 @@ class ShellState extends State<Shell> {
       canPop: index == 0 && _exitArmed,
       onPopInvokedWithResult: (didPop, _) {
         if (didPop) return;
+        if (index == kMediaIndex && mediaTab != 0) {
+          setState(() => mediaTab = 0);
+          return;
+        }
         if (index != 0) {
           goTo(tabs.contains(index) || index == kMoreIndex ? 0 : kMoreIndex);
           return;
@@ -212,7 +221,7 @@ class ShellState extends State<Shell> {
             ),
           ),
         ]),
-        if (!typing) _bar(context),
+        if (!typing) ..._bars(context),
       ]),
     ));
   }
@@ -256,7 +265,7 @@ class ShellState extends State<Shell> {
           const SizedBox(width: 12),
         ],
         if (media) ...[
-          _round(Icon(PIconsBold.plus, size: 20, color: C.text), () => showCreateSheet(context)),
+          _round(Icon(PIconsBold.caretLeft, size: 18, color: C.text), () => goTo(0)),
           const SizedBox(width: 12),
         ],
         Expanded(
@@ -279,8 +288,10 @@ class ShellState extends State<Shell> {
           ]),
         ),
         const SizedBox(width: 10),
-        _round(Icon(Icons.search_rounded, size: 21, color: C.text), () => push(SearchScreen(shell: this))),
-        const SizedBox(width: 10),
+        if (!media) ...[
+          _round(Icon(Icons.search_rounded, size: 21, color: C.text), () => push(SearchScreen(shell: this))),
+          const SizedBox(width: 10),
+        ],
         _round(
           reduceMotion(context)
               ? Icon(PIconsRegular.bell, size: 19, color: C.text)
@@ -289,7 +300,7 @@ class ShellState extends State<Shell> {
           badge: unreadNotifications > 0 ? unreadNotifications : null,
         ),
         const SizedBox(width: 10),
-        _round(Icon(Icons.chat_bubble_outline_rounded, size: 19, color: C.text), () => push(const InboxScreen()).then((_) => repo.leads().then((l) {
+        _round(Transform.rotate(angle: -0.5, child: Icon(Icons.send_outlined, size: 20, color: C.text)), () => push(const InboxScreen()).then((_) => repo.leads().then((l) {
               if (mounted) setState(() => unread = l.where((x) => x.status == 'new').length);
             }).catchError((_) {})), badge: unread > 0 ? unread : null),
       ]),
@@ -332,19 +343,113 @@ class ShellState extends State<Shell> {
     );
   }
 
+  /// The bar on the Media page, laid out like Instagram's: feed, explore, create, reels and your profile.
+  Widget _instaBar(BuildContext context) {
+    final bottom = MediaQuery.of(context).padding.bottom;
+    Widget item(String label, Widget Function(bool on) icon, int tab, {VoidCallback? onTap}) {
+      final on = mediaTab == tab && tab != 2;
+      return Expanded(
+        child: Pressable(
+          scale: 0.86,
+          onTap: onTap ?? () => setState(() => mediaTab = tab),
+          child: Semantics(
+            label: label,
+            button: true,
+            selected: on,
+            child: SizedBox(height: 54, child: Center(child: AnimatedSwitcher(duration: kFast, switchInCurve: Curves.easeOutBack, transitionBuilder: (c, a) => ScaleTransition(scale: a, child: c), child: KeyedSubtree(key: ValueKey(on), child: icon(on))))),
+          ),
+        ),
+      );
+    }
+
+    return Positioned(
+      left: 0,
+      right: 0,
+      bottom: 0,
+      child: _swap(
+        visible: index == kMediaIndex,
+        // The icons rise in one after another, so the bar feels built rather than switched.
+        child: ClipRect(
+        child: BackdropFilter(
+          filter: ui.ImageFilter.blur(sigmaX: 22, sigmaY: 22),
+          child: Container(
+            padding: EdgeInsets.only(bottom: bottom),
+            decoration: BoxDecoration(color: C.surface.withValues(alpha: C.dark ? 0.82 : 0.9), border: Border(top: BorderSide(color: C.border))),
+            child: Row(children: [
+              item('Feed', (on) => Icon(on ? Icons.home_rounded : Icons.home_outlined, size: 28, color: C.text), 0),
+              item('Explore', (on) => Icon(on ? Icons.manage_search_rounded : Icons.search_rounded, size: 28, color: C.text), 1),
+              item('Create', (on) => Icon(Icons.add_box_outlined, size: 27, color: C.text), 4, onTap: () => showCreateSheet(context)),
+              item('Reels', (on) => Icon(Icons.slow_motion_video_outlined, size: 27, color: C.text), 2, onTap: _openReels),
+              item(
+                'Your profile',
+                (on) => Container(
+                  padding: const EdgeInsets.all(2),
+                  decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: on ? C.text : Colors.transparent, width: 2)),
+                  child: const Avatar('Hartley Roofing', size: 26),
+                ),
+                3,
+              ),
+            ]),
+          ),
+        ),
+      ),
+      ),
+    );
+  }
+
+  /// Slides a bar up from below and fades it in, or slides it down and fades it out. A bar that is out of view cannot be tapped.
+  Widget _swap({required bool visible, required Widget child}) {
+    final still = reduceMotion(context);
+    final d = still ? Duration.zero : const Duration(milliseconds: 460);
+    return ExcludeSemantics(
+      excluding: !visible,
+      child: IgnorePointer(
+        ignoring: !visible,
+        child: AnimatedSlide(
+        offset: visible ? Offset.zero : const Offset(0, 1.3),
+        duration: d,
+        curve: visible ? Curves.easeOutCubic : Curves.easeInCubic,
+        child: AnimatedOpacity(
+          opacity: visible ? 1 : 0,
+          duration: d,
+          curve: visible ? const Interval(0.15, 1, curve: Curves.easeOut) : Curves.easeIn,
+          child: AnimatedScale(scale: visible ? 1 : 0.94, duration: d, curve: Curves.easeOutCubic, child: child),
+        ),
+      ),
+      ),
+    );
+  }
+
+  /// Reels full screen, from the bar.
+  Future<void> _openReels() async {
+    try {
+      final list = await repo.reels();
+      if (!mounted || list.isEmpty) return;
+      Navigator.of(context).push(PageRouteBuilder(opaque: false, pageBuilder: (_, __, ___) => ReelsViewer(reels: list, onChanged: () {})));
+    } catch (_) {
+      if (mounted) showMsg(context, "Couldn't open Reels. Try again.");
+    }
+  }
+
+  /// Both bars stay in the tree and trade places: the normal one slides down as the Instagram-style one rises, and back.
+  List<Widget> _bars(BuildContext context) => [_bar(context), _instaBar(context)];
+
   Widget _bar(BuildContext context) {
     final bottom = MediaQuery.of(context).padding.bottom;
     return Positioned(
       left: 14,
       right: 14,
       bottom: bottom + 4,
-      child: LiquidNavBar(selected: _slot, children: [
-        _tab(0, 'Home'),
-        _tab(1, 'Reviews'),
-        Expanded(child: Center(child: _centerButton())),
-        _tab(kMediaIndex, 'Media'),
-        _tab(kMoreIndex, 'More'),
-      ]),
+      child: _swap(
+        visible: index != kMediaIndex,
+        child: LiquidNavBar(selected: _slot, children: [
+          _tab(0, 'Home'),
+          _tab(1, 'Reviews'),
+          Expanded(child: Center(child: _centerButton())),
+          _tab(kMediaIndex, 'Media'),
+          _tab(kMoreIndex, 'More'),
+        ]),
+      ),
     );
   }
 
@@ -471,12 +576,12 @@ class _MoreGridState extends State<_MoreGrid> {
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text('Appearance', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
                 SizedBox(height: 2),
-                Muted('Light, dark, or follow your phone', size: 12.5),
+                Muted('Light, dark, or Special: airy by day, glassy at night', size: 12.5),
               ]),
             ),
           ]),
           const SizedBox(height: 14),
-          Pills(const ['Automatic', 'Light', 'Dark'], ThemeController.instance.mode.index, (i) => ThemeController.instance.setMode(AppThemeMode.values[i])),
+          Pills(const ['Light', 'Dark', 'Special'], ThemeController.instance.mode.index, (i) => ThemeController.instance.setMode(AppThemeMode.values[i])),
         ]),
       ).reveal(context, n++, 0.05),
       const SizedBox(height: 8),

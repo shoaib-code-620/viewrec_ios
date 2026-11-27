@@ -27,9 +27,25 @@ class WelcomeScreen extends StatelessWidget {
         SafeArea(
           child: ListView(padding: const EdgeInsets.fromLTRB(24, 12, 24, 40), children: [
             Row(children: [
-              const BrandMark(size: 44),
+              const Expanded(
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Row(mainAxisSize: MainAxisSize.min, children: [
+                      BrandMark(size: 44),
+                      SizedBox(width: 8),
+                      Text('ViewRec', style: TextStyle(fontSize: 21, fontWeight: FontWeight.w800, letterSpacing: -0.6)),
+                    ]),
+                  ),
+                ),
+              ),
               const SizedBox(width: 8),
-              const Text('ViewRec', style: TextStyle(fontSize: 21, fontWeight: FontWeight.w800, letterSpacing: -0.6)),
+              TextButton(
+                onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SignInScreen())),
+                child: Text('Sign in', style: TextStyle(fontWeight: FontWeight.w800, color: C.primary)),
+              ),
+              IntrinsicWidth(child: AppButton('Get started', small: true, onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const StartTrialScreen())))),
             ]).reveal(context, 0),
             const SizedBox(height: 30),
             Align(

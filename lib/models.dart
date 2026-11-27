@@ -100,10 +100,11 @@ class UsageItem {
   factory UsageItem.fromJson(Map<String, dynamic> j) => UsageItem(j['label'] ?? '', j['used'] ?? 0, '${j['limit'] ?? ''}');
 }
 
+/// One payment: what it was for, how much, when, and whether it went through (paid or pending).
 class Invoice {
-  final String title, amount, date;
-  const Invoice(this.title, this.amount, this.date);
-  factory Invoice.fromJson(Map<String, dynamic> j) => Invoice(j['title'] ?? '', j['amount'] ?? '', j['date'] ?? '');
+  final String title, amount, date, status;
+  const Invoice(this.title, this.amount, this.date, {this.status = 'paid'});
+  factory Invoice.fromJson(Map<String, dynamic> j) => Invoice(j['title'] ?? '', j['amount'] ?? '', j['date'] ?? '', status: j['status'] ?? 'paid');
 }
 
 class BillingInfo {
@@ -111,9 +112,17 @@ class BillingInfo {
   final int trialDay, trialLength;
   final String afterTrialNote, billingEmail;
   final bool hasCard;
+  /// For example "Visa ending 4242". Empty when there is no card.
+  final String cardLabel;
+  /// True once the subscription was stopped. It runs until [endsOn], then nothing more is charged.
+  final bool stopped;
+  final String endsOn;
   final List<UsageItem> usage;
   final List<Invoice> invoices;
   const BillingInfo({
+    this.cardLabel = '',
+    this.stopped = false,
+    this.endsOn = '',
     required this.plan,
     required this.status,
     required this.trialDay,
@@ -132,6 +141,9 @@ class BillingInfo {
         afterTrialNote: j['afterTrialNote'] ?? '',
         billingEmail: j['billingEmail'] ?? '',
         hasCard: j['hasCard'] == true,
+        cardLabel: j['cardLabel'] ?? '',
+        stopped: j['stopped'] == true,
+        endsOn: j['endsOn'] ?? '',
         usage: (j['usage'] as List? ?? []).map((e) => UsageItem.fromJson(e)).toList(),
         invoices: (j['invoices'] as List? ?? []).map((e) => Invoice.fromJson(e)).toList(),
       );
@@ -220,6 +232,67 @@ class InsightsData {
         avgWatchPercent: j['avgWatchPercent'] ?? 0,
         responseRate: (j['responseRate'] ?? 0).toDouble(),
         byPlatform: (j['byPlatform'] as List? ?? []).map((e) => PlatformViews.fromJson(e)).toList(),
+      );
+}
+
+/// One of your posts, ranked by how it did.
+class TopPost {
+  final String title, kind; // kind: reel | post
+  final int reach, likes, comments;
+  final int hue;
+  const TopPost(this.title, this.kind, this.reach, this.likes, this.comments, this.hue);
+  factory TopPost.fromJson(Map<String, dynamic> j) => TopPost(j['title'] ?? '', j['kind'] ?? 'post', j['reach'] ?? 0, j['likes'] ?? 0, j['comments'] ?? 0, j['hue'] ?? 210);
+}
+
+/// What the Media page earned over a period, laid out like Instagram's own insights.
+class MediaInsights {
+  final int days, reach, reachDelta, impressions, profileVisits, linkTaps;
+  final int likes, comments, saves, shares;
+  final int followers, followersGained, followersLost;
+  /// Reach for each day of the period, oldest first.
+  final List<int> daily;
+  final int pctFollowers; // share of reach from people who already follow you
+  final List<TopPost> topPosts;
+  final List<PlatformViews> topPlaces;
+  const MediaInsights({
+    required this.days,
+    required this.reach,
+    required this.reachDelta,
+    required this.impressions,
+    required this.profileVisits,
+    required this.linkTaps,
+    required this.likes,
+    required this.comments,
+    required this.saves,
+    required this.shares,
+    required this.followers,
+    required this.followersGained,
+    required this.followersLost,
+    required this.daily,
+    required this.pctFollowers,
+    required this.topPosts,
+    required this.topPlaces,
+  });
+  int get interactions => likes + comments + saves + shares;
+  int get netFollowers => followersGained - followersLost;
+  factory MediaInsights.fromJson(Map<String, dynamic> j) => MediaInsights(
+        days: j['days'] ?? 7,
+        reach: j['reach'] ?? 0,
+        reachDelta: j['reachDelta'] ?? 0,
+        impressions: j['impressions'] ?? 0,
+        profileVisits: j['profileVisits'] ?? 0,
+        linkTaps: j['linkTaps'] ?? 0,
+        likes: j['likes'] ?? 0,
+        comments: j['comments'] ?? 0,
+        saves: j['saves'] ?? 0,
+        shares: j['shares'] ?? 0,
+        followers: j['followers'] ?? 0,
+        followersGained: j['followersGained'] ?? 0,
+        followersLost: j['followersLost'] ?? 0,
+        daily: List<int>.from(j['daily'] ?? const []),
+        pctFollowers: j['pctFollowers'] ?? 0,
+        topPosts: (j['topPosts'] as List? ?? []).map((e) => TopPost.fromJson(e)).toList(),
+        topPlaces: (j['topPlaces'] as List? ?? []).map((e) => PlatformViews.fromJson(e)).toList(),
       );
 }
 

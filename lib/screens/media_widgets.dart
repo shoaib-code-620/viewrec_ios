@@ -1,8 +1,10 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
 import '../media_data.dart';
 import 'media_create.dart';
+import 'media_explore.dart';
 import 'media_profile.dart';
 import '../motion.dart';
 import '../repo.dart';
@@ -215,6 +217,63 @@ void showCommentsSheet(BuildContext context, Reel reel, VoidCallback onChanged) 
   );
 }
 
+/// A caption like Instagram's: the business name first, #hashtags and @mentions in blue and tappable, and "more" for long text.
+class CaptionText extends StatefulWidget {
+  final String name, text;
+  final bool onDark;
+  final double size;
+  const CaptionText({super.key, required this.name, required this.text, this.onDark = false, this.size = 14});
+  @override
+  State<CaptionText> createState() => _CaptionTextState();
+}
+
+class _CaptionTextState extends State<CaptionText> {
+  bool open = false;
+  final _taps = <TapGestureRecognizer>[];
+
+  @override
+  void dispose() {
+    for (final t in _taps) {
+      t.dispose();
+    }
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    for (final t in _taps) {
+      t.dispose();
+    }
+    _taps.clear();
+    final base = TextStyle(fontSize: widget.size, height: 1.4, color: widget.onDark ? Colors.white : C.text);
+    final link = base.copyWith(color: widget.onDark ? const Color(0xFF8CC3FF) : C.primary, fontWeight: FontWeight.w600);
+    final spans = <InlineSpan>[TextSpan(text: '${widget.name}  ', style: base.copyWith(fontWeight: FontWeight.w800))];
+    for (final m in RegExp(r'(#\w+|@\w+|[^#@]+|[#@])').allMatches(widget.text)) {
+      final w = m.group(0)!;
+      if (w.length > 1 && w.startsWith('#')) {
+        final r = TapGestureRecognizer()..onTap = () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => HashtagScreen(tag: w.substring(1))));
+        _taps.add(r);
+        spans.add(TextSpan(text: w, style: link, recognizer: r));
+      } else if (w.length > 1 && w.startsWith('@')) {
+        spans.add(TextSpan(text: w, style: link));
+      } else {
+        spans.add(TextSpan(text: w));
+      }
+    }
+    final long = widget.text.length > 90;
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: long ? () => setState(() => open = !open) : null,
+      child: AnimatedSize(
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeOut,
+        alignment: Alignment.topLeft,
+        child: Text.rich(TextSpan(style: base, children: spans), maxLines: open ? null : 2, overflow: open ? TextOverflow.visible : TextOverflow.ellipsis),
+      ),
+    );
+  }
+}
+
 class _CommentsBody extends StatefulWidget {
   final Reel reel;
   final VoidCallback onChanged;
@@ -225,6 +284,9 @@ class _CommentsBody extends StatefulWidget {
 
 class _CommentsBodyState extends State<_CommentsBody> {
   final input = TextEditingController();
+  final focus = FocusNode();
+  /// Comments you liked on this phone.
+  final liked = <String>{};
   List<Comment>? list;
   bool sending = false;
 
@@ -240,6 +302,7 @@ class _CommentsBodyState extends State<_CommentsBody> {
 
   @override
   void dispose() {
+    focus.dispose();
     input.dispose();
     super.dispose();
   }
@@ -287,7 +350,38 @@ class _CommentsBodyState extends State<_CommentsBody> {
                                 ]),
                                 const SizedBox(height: 2),
                                 Text(c.text, style: const TextStyle(fontSize: 14, height: 1.35)),
+                                const SizedBox(height: 4),
+                                Row(children: [
+                                  if (c.id.hashCode % 9 + (liked.contains(c.id) ? 1 : 0) > 0)
+                                    Padding(
+                                      padding: const EdgeInsets.only(right: 14),
+                                      child: Text('${c.id.hashCode % 9 + (liked.contains(c.id) ? 1 : 0)} likes', style: TextStyle(fontSize: 12, color: C.muted, fontWeight: FontWeight.w600)),
+                                    ),
+                                  GestureDetector(
+                                    behavior: HitTestBehavior.opaque,
+                                    onTap: () {
+                                      input.text = '@${c.author.split(' ').first} ';
+                                      input.selection = TextSelection.collapsed(offset: input.text.length);
+                                      focus.requestFocus();
+                                    },
+                                    child: Text('Reply', style: TextStyle(fontSize: 12, color: C.muted, fontWeight: FontWeight.w800)),
+                                  ),
+                                ]),
                               ]),
+                            ),
+                            GestureDetector(
+                              key: ValueKey('like_${c.id}'),
+                              behavior: HitTestBehavior.opaque,
+                              onTap: () => setState(() => liked.contains(c.id) ? liked.remove(c.id) : liked.add(c.id)),
+                              child: Padding(
+                                padding: const EdgeInsets.fromLTRB(8, 2, 0, 8),
+                                child: AnimatedScale(
+                                  scale: liked.contains(c.id) ? 1.2 : 1,
+                                  duration: const Duration(milliseconds: 250),
+                                  curve: Curves.easeOutBack,
+                                  child: Icon(liked.contains(c.id) ? Icons.favorite_rounded : Icons.favorite_border_rounded, size: 18, color: liked.contains(c.id) ? const Color(0xFFE5484D) : C.muted),
+                                ),
+                              ),
                             ),
                             if (c.author != 'You')
                               GestureDetector(
@@ -303,6 +397,7 @@ class _CommentsBodyState extends State<_CommentsBody> {
           Expanded(
             child: TextField(
               controller: input,
+              focusNode: focus,
               onSubmitted: (_) => _send(),
               decoration: InputDecoration(
                 hintText: 'Add a comment…',

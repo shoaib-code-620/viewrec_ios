@@ -8,6 +8,8 @@ import 'package:flutter/material.dart';
 /// soft teal, yellow and coral glows, and warm accents (coral, yellow, teal) for status and highlights.
 class C {
   static bool dark = false;
+  /// Special mode: the premium look. Airy and pastel in daylight, deep and glassy at night, with livelier backgrounds.
+  static bool special = false;
 
   static Color _p(Color d, Color l) => dark ? d : l;
 

@@ -73,7 +73,9 @@ class StoryGroup {
 
 /// A customer testimonial shown as a reel in the feed.
 class Reel {
-  final String id, businessId, business, handle, category, caption, reviewer, duration;
+  final String id, businessId, business, handle, category, reviewer, duration;
+  /// The text under the post. #tags and @mentions in it are tappable.
+  String caption;
   final int rating, views;
   int likes, comments;
   final Color hue;
@@ -149,6 +151,20 @@ class BusinessRef {
       );
 }
 
+/// A saved set of stories kept on a business's profile, like Instagram's highlights.
+class Highlight {
+  final String id, title;
+  final Color hue;
+  final List<StoryItem> items;
+  const Highlight({required this.id, required this.title, required this.hue, this.items = const []});
+  factory Highlight.fromJson(Map<String, dynamic> j) => Highlight(
+        id: '${j['id']}',
+        title: j['title'] ?? '',
+        hue: colorFromHex(j['hue'] ?? '#3E94F5'),
+        items: [for (final e in (j['items'] as List? ?? [])) StoryItem.fromJson(e)],
+      );
+}
+
 /// A business's public page in the Media tab.
 class PublicProfile {
   final String businessId, handle, name, category, about;
@@ -157,6 +173,9 @@ class PublicProfile {
   final double rating;
   bool following, blocked;
   final List<Reel> posts;
+  final List<Highlight> highlights;
+  /// Every like on this business's posts, shown on the profile.
+  int get likes => posts.fold(0, (a, r) => a + r.likes);
   PublicProfile({
     required this.businessId,
     required this.handle,
@@ -172,6 +191,7 @@ class PublicProfile {
     this.following = false,
     this.blocked = false,
     this.posts = const [],
+    this.highlights = const [],
   });
   factory PublicProfile.fromJson(Map<String, dynamic> j) => PublicProfile(
         businessId: '${j['businessId']}',
@@ -188,6 +208,7 @@ class PublicProfile {
         following: j['following'] == true,
         blocked: j['blocked'] == true,
         posts: (j['posts'] as List? ?? []).map((e) => Reel.fromJson(e)).toList(),
+        highlights: [for (final e in (j['highlights'] as List? ?? [])) Highlight.fromJson(e)],
       );
 }
 
@@ -243,7 +264,7 @@ List<StoryGroup> demoStories() => [
       ]),
     ];
 
-List<Reel> demoReels() => [
+List<Reel> demoReels() => _tagged([
       Reel(id: 'r1', businessId: 'b1', business: 'Brightside Dental', handle: '@brightsidedental', category: 'Health & Medical', reviewer: 'Emma Clarke', caption: 'Painless, friendly and they explained every step. My daughter actually asked to go back!', duration: '0:48', rating: 5, views: 3200, likes: 412, comments: 28, hue: const Color(0xFF3E94F5), following: true),
       Reel(id: 'r2', businessId: 'b2', business: 'Northgate Autos', handle: '@northgateautos', category: 'Automotive', reviewer: 'Liam Foster', caption: 'Quoted £280, charged £280. Car back a day early. Honest garage at last.', duration: '1:02', rating: 5, views: 1800, likes: 233, comments: 14, hue: const Color(0xFFFF6B5E)),
       Reel(id: 'r3', businessId: 'b3', business: 'Green Leaf Landscaping', handle: '@greenleafgardens', category: 'Home & Trades', reviewer: 'Chloe Bennett', caption: 'Our garden looks like a magazine now. Tidy crew, and they took all the rubbish away.', duration: '1:15', rating: 5, views: 5400, likes: 689, comments: 51, hue: const Color(0xFF0F9F78), following: true),
@@ -254,7 +275,17 @@ List<Reel> demoReels() => [
       Reel(id: 'r8', businessId: 'b7', business: 'Ember Kitchen', handle: '@emberkitchen', category: 'Food & Restaurants', reviewer: 'Noah Hughes', caption: "Best birthday dinner we've ever had. The staff made it feel really special.", duration: '0:52', rating: 5, views: 7300, likes: 902, comments: 64, hue: const Color(0xFFF2A100)),
       Reel(id: 'r9', businessId: 'b8', business: 'Atlas Movers', handle: '@atlasmovers', category: 'Logistics & Transport', reviewer: 'Grace Morgan', caption: 'Moved a three-bed house in one day with zero breakages. Brilliant team.', duration: '1:20', rating: 5, views: 1500, likes: 190, comments: 11, hue: const Color(0xFF3F3A2A)),
       Reel(id: 'r10', businessId: 'b9', business: 'Clearview Windows', handle: '@clearviewwindows', category: 'Construction', reviewer: 'Ethan Cole', caption: 'The house is warmer and so much quieter. Fitted in a single afternoon.', duration: '0:59', rating: 4, views: 1100, likes: 144, comments: 9, hue: const Color(0xFF2A5C3F)),
-    ];
+    ]);
+
+/// Sample posts get a couple of hashtags, so tags can be tried before the real feed exists.
+List<Reel> _tagged(List<Reel> list) {
+  for (final r in list) {
+    final first = r.business.split(RegExp(r'[^A-Za-z]+')).first.toLowerCase();
+    final cat = r.category.split(RegExp(r'[^A-Za-z]+')).first.toLowerCase();
+    r.caption = '${r.caption} #${r.rating}stars #$first #$cat';
+  }
+  return list;
+}
 
 List<Comment> demoComments(String reelId) => const [
       Comment(id: 'c1', author: 'Sophie Walker', text: 'This is exactly what I was looking for, thank you for sharing!', when: '2h'),

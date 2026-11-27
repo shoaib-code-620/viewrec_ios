@@ -6,11 +6,14 @@ import '../motion.dart';
 import '../repo.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import 'media_explore.dart';
+import 'media_insights.dart';
 import 'media_viewers.dart';
+import 'settings.dart';
 import 'media_widgets.dart';
 
 /// The business that is "you" in the sample data. You cannot report or block yourself.
-const _myBusinessId = 'b0';
+const kMyBusinessId = 'b0';
 
 void openProfile(BuildContext context, String businessId) =>
     Navigator.of(context).push(MaterialPageRoute(builder: (_) => PublicProfileScreen(businessId: businessId)));
@@ -98,7 +101,7 @@ Future<bool> blockBusiness(BuildContext context, {required String businessId, re
 
 /// The "..." menu on a post or reel.
 void showPostMenu(BuildContext context, Reel r, {required List<Reel> all, required VoidCallback onChanged}) {
-  final mine = r.businessId == _myBusinessId;
+  final mine = r.businessId == kMyBusinessId;
   showSheet(
     context,
     Column(mainAxisSize: MainAxisSize.min, children: [
@@ -124,7 +127,9 @@ void showPostMenu(BuildContext context, Reel r, {required List<Reel> all, requir
 
 class PublicProfileScreen extends StatelessWidget {
   final String businessId;
-  const PublicProfileScreen({super.key, required this.businessId});
+  /// Inside the Media tab (your own profile): no back arrow, because the bar at the bottom is the way around.
+  final bool embedded;
+  const PublicProfileScreen({super.key, required this.businessId, this.embedded = false});
   @override
   Widget build(BuildContext context) => Scaffold(
         body: Stack(children: [
@@ -134,7 +139,7 @@ class PublicProfileScreen extends StatelessWidget {
             child: AsyncView<PublicProfile>(
               load: () => repo.publicProfile(businessId),
               skeletonCards: 3,
-              builder: (context, p, refresh) => _ProfileBody(profile: p, refresh: refresh),
+              builder: (context, p, refresh) => _ProfileBody(profile: p, refresh: refresh, embedded: embedded),
             ),
           ),
         ]),
@@ -144,7 +149,8 @@ class PublicProfileScreen extends StatelessWidget {
 class _ProfileBody extends StatefulWidget {
   final PublicProfile profile;
   final Future<void> Function() refresh;
-  const _ProfileBody({required this.profile, required this.refresh});
+  final bool embedded;
+  const _ProfileBody({required this.profile, required this.refresh, this.embedded = false});
   @override
   State<_ProfileBody> createState() => _ProfileBodyState();
 }
@@ -152,6 +158,24 @@ class _ProfileBody extends StatefulWidget {
 class _ProfileBodyState extends State<_ProfileBody> {
   late final p = widget.profile;
   bool busy = false;
+  /// 0 Posts, 1 Reels, 2 Saved (only on your own profile), 3 Tagged.
+  int gridTab = 0;
+  List<Reel> savedPosts = [];
+  /// A few of the people who follow this business, shown so visitors can see who trusts it.
+  List<BusinessRef> followers = [];
+
+  @override
+  void initState() {
+    super.initState();
+    repo.followersOf(p.businessId).then((f) {
+      if (mounted) setState(() => followers = f);
+    }).catchError((_) {});
+    if (p.mine) {
+      repo.reels().then((all) {
+        if (mounted) setState(() => savedPosts = all.where((r) => r.saved).toList());
+      }).catchError((_) {});
+    }
+  }
 
   Future<void> _follow() async {
     if (busy) return;
@@ -212,6 +236,73 @@ class _ProfileBodyState extends State<_ProfileBody> {
     );
   }
 
+  Widget _gridTabs() {
+    final tabs = <(int, IconData, String)>[
+      (0, Icons.grid_on_rounded, 'Posts'),
+      (1, Icons.movie_creation_outlined, 'Reels'),
+      if (p.mine) (2, Icons.bookmark_border_rounded, 'Saved'),
+      (3, Icons.person_pin_outlined, 'Tagged'),
+    ];
+    return Row(children: [
+      for (final t in tabs)
+        Expanded(
+          child: Semantics(
+            label: t.$3,
+            button: true,
+            selected: gridTab == t.$1,
+            child: GestureDetector(
+              key: ValueKey('gridtab_${t.$3}'),
+              behavior: HitTestBehavior.opaque,
+              onTap: () => setState(() => gridTab = t.$1),
+              child: Column(children: [
+                Padding(padding: const EdgeInsets.symmetric(vertical: 10), child: Icon(t.$2, color: gridTab == t.$1 ? C.text : C.muted)),
+                AnimatedContainer(duration: kFast, height: 2, color: gridTab == t.$1 ? C.text : Colors.transparent),
+              ]),
+            ),
+          ),
+        ),
+    ]);
+  }
+
+  Widget _grid() {
+    final list = switch (gridTab) {
+      1 => p.posts.where((r) => r.isVideo || r.kind != 'post').toList(),
+      2 => savedPosts,
+      3 => <Reel>[],
+      _ => p.posts,
+    };
+    if (list.isEmpty) {
+      return switch (gridTab) {
+        2 => const EmptyState(Icons.bookmark_border_rounded, 'Nothing saved yet', 'Tap the bookmark on a post to keep it here. Only you can see this.'),
+        3 => const EmptyState(Icons.person_pin_outlined, 'No tagged posts', 'Posts where this business is mentioned show here.'),
+        1 => const EmptyState(Icons.movie_creation_outlined, 'No reels yet', 'Short videos show here.'),
+        _ => const EmptyState(Icons.video_library_outlined, 'No posts yet', 'Reviews and updates from this business show here.'),
+      };
+    }
+    return GridView.count(
+      crossAxisCount: 3,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      mainAxisSpacing: 8,
+      crossAxisSpacing: 8,
+      childAspectRatio: 0.78,
+      children: [
+        for (var i = 0; i < list.length; i++)
+          ReelTile(
+            reel: list[i],
+            onTap: () => gridTab == 2 ? _openList(list, i) : (gridTab == 0 ? _openPosts(i) : _openList(list, i)),
+          ),
+      ],
+    );
+  }
+
+  void _openList(List<Reel> list, int i) => Navigator.of(context).push(PageRouteBuilder(
+        opaque: false,
+        pageBuilder: (_, __, ___) => ReelsViewer(reels: list, startIndex: i, onChanged: () {
+          if (mounted) setState(() {});
+        }),
+      ));
+
   void _lists(int tab) => Navigator.of(context).push(MaterialPageRoute(builder: (_) => FollowListScreen(businessId: p.businessId, name: p.name, initialTab: tab)));
 
   Widget _stat(String value, String label, {VoidCallback? onTap}) => Expanded(
@@ -248,7 +339,7 @@ class _ProfileBodyState extends State<_ProfileBody> {
                 if (p.verified) const Padding(padding: EdgeInsets.only(left: 6), child: Icon(Icons.verified_rounded, size: 20, color: Color(0xFFFFD65A))),
               ]),
               const SizedBox(height: 2),
-              Text('${p.handle} · ${p.category}', textAlign: TextAlign.center, style: TextStyle(color: Colors.white.withValues(alpha: 0.85), fontSize: 13)),
+              Text('${p.handle} · ${p.category}${p.rating > 0 ? ' · ${p.rating.toStringAsFixed(1)} stars' : ''}', textAlign: TextAlign.center, style: TextStyle(color: Colors.white.withValues(alpha: 0.85), fontSize: 13)),
               if (p.about.isNotEmpty) ...[
                 const SizedBox(height: 10),
                 Text(p.about, textAlign: TextAlign.center, style: TextStyle(color: Colors.white.withValues(alpha: 0.9), fontSize: 14, height: 1.4)),
@@ -256,38 +347,90 @@ class _ProfileBodyState extends State<_ProfileBody> {
               const SizedBox(height: 18),
               Row(children: [
                 _stat('${p.posts.length}', 'Posts'),
+                _stat(ReelTile.compact(p.likes), 'Likes'),
                 _stat('${p.followers}', 'Followers', onTap: () => _lists(0)),
                 _stat('${p.followingCount}', 'Following', onTap: () => _lists(1)),
-                _stat(p.rating.toStringAsFixed(1), 'Rating'),
               ]),
             ]),
           ]),
         ),
       );
 
-  Widget _tile(Reel r, int i) => Pressable(
-        scale: 0.97,
-        onTap: () => Navigator.of(context).push(PageRouteBuilder(
-          opaque: false,
-          pageBuilder: (_, __, ___) => ReelsViewer(reels: p.posts, startIndex: i, onChanged: () {
-            if (mounted) setState(() {});
-          }),
-        )),
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(18),
-            gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [r.hue, Color.lerp(r.hue, Colors.black, 0.55)!]),
+  /// "Followed by Brightside Dental, Northgate Autos and 115 others", with their avatars.
+  Widget _followedBy() {
+    if (followers.isEmpty) return const SizedBox.shrink();
+    final shown = followers.take(3).toList();
+    final others = p.followers - shown.length;
+    final names = shown.map((f) => f.name).take(2).join(', ');
+    return Pressable(
+      onTap: () => _lists(0),
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 14),
+        child: Row(children: [
+          SizedBox(
+            width: 28.0 + (shown.length - 1) * 20,
+            height: 32,
+            child: Stack(children: [
+              for (var i = 0; i < shown.length; i++)
+                Positioned(left: i * 20.0, child: Container(padding: const EdgeInsets.all(2), decoration: BoxDecoration(shape: BoxShape.circle, color: C.bg), child: Avatar(shown[i].name, size: 28))),
+            ]),
           ),
-          padding: const EdgeInsets.all(8),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Align(alignment: Alignment.topRight, child: Icon(r.isVideo || r.kind == 'testimonial' ? Icons.play_circle_fill_rounded : Icons.image_rounded, size: 18, color: Colors.white70)),
-            const Spacer(),
-            Row(children: [for (var k = 0; k < r.rating.clamp(0, 5); k++) const Icon(Icons.star_rounded, size: 11, color: Color(0xFFFFC21A))]),
-            const SizedBox(height: 2),
-            Text(r.reviewer, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 12)),
-          ]),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'Followed by $names${others > 0 ? ' and $others others' : ''}',
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontSize: 13, color: C.muted, fontWeight: FontWeight.w600, height: 1.3),
+            ),
+          ),
+        ]),
+      ),
+    );
+  }
+
+  /// Saved stories on the profile, as round covers. Tap one to watch it.
+  Widget _highlights() => SizedBox(
+        height: 96,
+        child: ListView.separated(
+          scrollDirection: Axis.horizontal,
+          itemCount: p.highlights.length,
+          separatorBuilder: (_, __) => const SizedBox(width: 16),
+          itemBuilder: (_, i) {
+            final h = p.highlights[i];
+            return Pressable(
+              onTap: () => Navigator.of(context).push(PageRouteBuilder(
+                opaque: false,
+                pageBuilder: (_, __, ___) => StoryViewer(groups: [StoryGroup(id: h.id, business: p.name, category: h.title, items: h.items)]),
+              )),
+              child: SizedBox(
+                width: 70,
+                child: Column(children: [
+                  Container(
+                    width: 64,
+                    height: 64,
+                    padding: const EdgeInsets.all(3),
+                    decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: C.border, width: 2)),
+                    child: Container(
+                      decoration: BoxDecoration(shape: BoxShape.circle, gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [h.hue, Color.lerp(h.hue, Colors.black, 0.4)!])),
+                      child: const Icon(Icons.auto_awesome_motion_rounded, color: Colors.white70, size: 22),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(h.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                ]),
+              ),
+            );
+          },
         ),
       );
+
+  void _openPosts(int i) => Navigator.of(context).push(PageRouteBuilder(
+        opaque: false,
+        pageBuilder: (_, __, ___) => ReelsViewer(reels: p.posts, startIndex: i, onChanged: () {
+          if (mounted) setState(() {});
+        }),
+      ));
 
   @override
   Widget build(BuildContext context) {
@@ -298,7 +441,10 @@ class _ProfileBodyState extends State<_ProfileBody> {
         physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
         padding: const EdgeInsets.fromLTRB(18, 8, 18, 40),
         children: [
-          BackHeader(p.handle, trailing: menuButton),
+          if (widget.embedded)
+            Padding(padding: const EdgeInsets.fromLTRB(4, 4, 0, 14), child: Text(p.handle, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, letterSpacing: -0.6)))
+          else
+            BackHeader(p.handle, trailing: menuButton),
           _hero(),
           const SizedBox(height: 16),
           if (p.blocked)
@@ -314,21 +460,22 @@ class _ProfileBodyState extends State<_ProfileBody> {
               ]),
             )
           else ...[
-            if (!p.mine)
-              AppButton(p.following ? 'Following' : 'Follow', icon: p.following ? Icons.check_rounded : Icons.person_add_alt_1_rounded, style: p.following ? BtnStyle.ghost : BtnStyle.primary, loading: busy, onTap: _follow),
-            const SectionHeader('Posts'),
-            if (p.posts.isEmpty)
-              const EmptyState(Icons.video_library_outlined, 'No posts yet', 'Reviews and updates from this business show here.')
+            _followedBy(),
+            if (p.mine) ...[
+              AppButton('Edit profile', icon: Icons.edit_rounded, style: BtnStyle.ghost, onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const BusinessProfileScreen()))),
+              const SizedBox(height: 10),
+              AppButton('Insights', icon: Icons.insights_rounded, style: BtnStyle.ghost, onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const MediaInsightsScreen()))),
+            ]
             else
-              GridView.count(
-                crossAxisCount: 3,
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                mainAxisSpacing: 8,
-                crossAxisSpacing: 8,
-                childAspectRatio: 0.72,
-                children: [for (var i = 0; i < p.posts.length; i++) _tile(p.posts[i], i)],
-              ),
+              AppButton(p.following ? 'Following' : 'Follow', icon: p.following ? Icons.check_rounded : Icons.person_add_alt_1_rounded, style: p.following ? BtnStyle.ghost : BtnStyle.primary, loading: busy, onTap: _follow),
+            if (p.highlights.isNotEmpty) ...[
+              const SectionHeader('Highlights'),
+              _highlights(),
+            ],
+            const SizedBox(height: 14),
+            _gridTabs(),
+            const SizedBox(height: 12),
+            _grid(),
           ],
         ],
       ),

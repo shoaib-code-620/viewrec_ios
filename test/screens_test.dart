@@ -102,7 +102,6 @@ final screens = <String, Widget Function()>{
   'Record consent': () => const RecordScreen(),
   'Record rate': () => const RecordScreen(initialStage: Stage.rate),
   'Record choose': () => const RecordScreen(initialStage: Stage.choose),
-  'Record write': () => const RecordScreen(initialStage: Stage.write),
   'Record avatar': () => const RecordScreen(initialStage: Stage.avatar),
   'Record done': () => const RecordScreen(initialStage: Stage.done),
   'Media feed': () => const Shell(initialIndex: kMediaIndex),

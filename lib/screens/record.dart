@@ -9,10 +9,11 @@ import '../data.dart';
 import '../repo.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import 'avatar.dart';
 
 /// The customer's side of the invitation: agree, rate, then share their
 /// experience as a video, in writing, or with an avatar (camera-shy mode).
-enum Stage { intro, rate, choose, write, avatar, camera, review, done }
+enum Stage { intro, rate, choose, avatar, camera, review, done }
 
 const _maxSeconds = 120;
 String _fmt(int s) => '${(s ~/ 60).toString().padLeft(2, '0')}:${(s % 60).toString().padLeft(2, '0')}';
@@ -58,7 +59,8 @@ class _RecordScreenState extends State<RecordScreen> {
   int rating = 0;
   final tags = <String>{};
   String? avatarId;
-  final written = TextEditingController();
+  /// The face the customer built to look like themselves. Used when [avatarId] is 'me'.
+  AvatarSpec mySpec = const AvatarSpec();
 
   bool uploading = false;
   double progress = 0;
@@ -69,7 +71,6 @@ class _RecordScreenState extends State<RecordScreen> {
     timer?.cancel();
     cam?.dispose();
     player?.dispose();
-    written.dispose();
     super.dispose();
   }
 
@@ -198,33 +199,12 @@ class _RecordScreenState extends State<RecordScreen> {
         duration: _fmt(_lastLength),
         agreedAt: agreedAt ?? DateTime.now().toIso8601String(),
         rating: rating == 0 ? 5 : rating,
-        avatar: avatarId,
+        avatar: avatarId == 'me' ? 'me:${mySpec.skin},${mySpec.hairStyle},${mySpec.hairColor},${mySpec.eyes},${mySpec.glasses},${mySpec.shirt}' : avatarId,
         onProgress: (p) {
           if (mounted) setState(() => progress = p);
         },
       );
       player?.pause();
-      if (mounted) setState(() => stage = Stage.done);
-    } catch (e) {
-      if (mounted) setState(() => uploadError = e.toString().replaceFirst('Exception: ', ''));
-    } finally {
-      if (mounted) setState(() => uploading = false);
-    }
-  }
-
-  Future<void> _sendWritten() async {
-    if (uploading) return;
-    setState(() {
-      uploading = true;
-      uploadError = null;
-    });
-    try {
-      await repo.submitWrittenTestimonial(
-        inviteToken: demoInviteToken,
-        rating: rating,
-        text: written.text.trim(),
-        agreedAt: agreedAt ?? DateTime.now().toIso8601String(),
-      );
       if (mounted) setState(() => stage = Stage.done);
     } catch (e) {
       if (mounted) setState(() => uploadError = e.toString().replaceFirst('Exception: ', ''));
@@ -244,7 +224,6 @@ class _RecordScreenState extends State<RecordScreen> {
         Stage.intro => _intro(),
         Stage.rate => _rate(),
         Stage.choose => _choose(),
-        Stage.write => _write(),
         Stage.avatar => _avatarPick(),
         Stage.done => _done(),
         _ => _cameraOrReview(),
@@ -402,52 +381,15 @@ class _RecordScreenState extends State<RecordScreen> {
         const SizedBox(height: 16),
         const Text('How would you like to share it?', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800, letterSpacing: -0.5)),
         const SizedBox(height: 8),
-        const Muted('Pick whatever feels easiest. All three reach the business the same way.'),
+        const Muted('Pick whatever feels easiest. Both reach the business the same way.'),
         const SizedBox(height: 22),
         option(Icons.videocam_rounded, C.rec, 'Record a video', 'About two minutes, with the words on screen', () {
           cameFrom = Stage.choose;
           avatarId = null;
           _openCamera();
         }, badge: 'Best'),
-        option(Icons.edit_note_rounded, C.blue, 'Write it instead', 'Type a few lines, no camera needed', () => setState(() => stage = Stage.write)),
         option(Icons.face_retouching_natural_rounded, C.green, 'Use an avatar', 'Camera-shy? Pick an avatar to show instead of your face', () => setState(() => stage = Stage.avatar)),
       ]),
-    );
-  }
-
-  // 4a. written testimonial
-  Widget _write() {
-    final len = written.text.trim().length;
-    return _pageShell(
-      back: Stage.choose,
-      body: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const SizedBox(height: 16),
-        const Text('Write a few lines', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800, letterSpacing: -0.5)),
-        const SizedBox(height: 8),
-        const Muted('What was it like to work with Hartley Roofing?'),
-        const SizedBox(height: 18),
-        Field('Your testimonial', controller: written, lines: 6, hint: 'They turned up when they said they would…', onChanged: (_) => setState(() {})),
-        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-          Text(len < 20 ? 'A little more, please (${20 - len} to go)' : 'Looks good', style: TextStyle(fontSize: 13, color: len < 20 ? C.muted : C.green)),
-          Text('$len', style: TextStyle(fontSize: 13, color: C.muted)),
-        ]),
-        const SizedBox(height: 14),
-        Text('Need a starting point?', style: TextStyle(color: C.muted, fontSize: 13, fontWeight: FontWeight.w600)),
-        const SizedBox(height: 8),
-        Wrap(spacing: 8, runSpacing: 8, children: [
-          for (final line in script)
-            ActionChip(
-              label: Text(line, style: const TextStyle(fontSize: 13)),
-              backgroundColor: C.surface,
-              side: BorderSide(color: C.border),
-              onPressed: () => setState(() => written.text = written.text.isEmpty ? line : '${written.text} $line'),
-            ),
-        ]),
-        if (uploadError != null)
-          Padding(padding: const EdgeInsets.only(top: 12), child: Text(uploadError!, style: TextStyle(color: C.rec, fontSize: 13))),
-      ]),
-      bottom: AppButton(uploading ? 'Sending…' : (uploadError != null ? 'Try again' : 'Send my testimonial'),
-          icon: uploading ? null : Icons.send_rounded, onTap: (len < 20 || uploading) ? null : _sendWritten),
     );
   }
 
@@ -460,6 +402,36 @@ class _RecordScreenState extends State<RecordScreen> {
           const SizedBox(height: 8),
           const Muted('You still speak to the camera, but your video shows this avatar instead of your face. Your voice is kept.'),
           const SizedBox(height: 20),
+          GestureDetector(
+            key: const ValueKey('avatar_me'),
+            onTap: () => setState(() => avatarId = 'me'),
+            child: Container(
+              padding: const EdgeInsets.all(14),
+              margin: const EdgeInsets.only(bottom: 14),
+              decoration: BoxDecoration(
+                color: C.surface,
+                borderRadius: BorderRadius.circular(rLg),
+                border: Border.all(color: avatarId == 'me' ? C.primary : C.border, width: avatarId == 'me' ? 2.5 : 1),
+              ),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Row(children: [
+                  FaceAvatar(spec: mySpec, size: 56),
+                  const SizedBox(width: 14),
+                  const Expanded(
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text('Make one that looks like you', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+                      SizedBox(height: 2),
+                      Muted('Skin, hair, eyes, glasses and top', size: 13),
+                    ]),
+                  ),
+                ]),
+                if (avatarId == 'me') ...[
+                  const SizedBox(height: 16),
+                  AvatarBuilder(initial: mySpec, onChanged: (v) => setState(() => mySpec = v)),
+                ],
+              ]),
+            ),
+          ),
           GridView.count(
             crossAxisCount: 3,
             shrinkWrap: true,
@@ -541,7 +513,7 @@ class _RecordScreenState extends State<RecordScreen> {
             const SizedBox(height: 16),
             AppButton('Try again', style: BtnStyle.ghost, small: true, onTap: _openCamera),
             const SizedBox(height: 8),
-            TextButton(onPressed: () => setState(() => stage = Stage.write), child: const Text('Write it instead')),
+            TextButton(onPressed: () => setState(() => stage = Stage.avatar), child: const Text('Use an avatar instead')),
           ]),
         ),
       );
@@ -575,10 +547,35 @@ class _RecordScreenState extends State<RecordScreen> {
     final reviewing = stage == Stage.review;
     final line = (seconds ~/ 4).clamp(0, script.length - 1);
     final av = _avatars.where((a) => a.id == avatarId).firstOrNull;
+    final mine = avatarId == 'me';
+    final showAvatar = (av != null || mine) && !reviewing;
     return Scaffold(
       backgroundColor: Colors.black,
       body: Stack(children: [
         Positioned.fill(child: _preview()),
+        // The moment recording starts, the avatar takes the place of the face and speaks along with the voice.
+        Positioned.fill(
+          child: IgnorePointer(
+            child: AnimatedOpacity(
+              opacity: showAvatar && recording ? 1 : 0,
+              duration: const Duration(milliseconds: 450),
+              curve: Curves.easeOut,
+              child: Container(
+                key: const ValueKey('avatar_stage'),
+                decoration: const BoxDecoration(gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Color(0xFF0B1B3A), Color(0xFF16356B)])),
+                alignment: const Alignment(0, -0.45),
+                child: AnimatedScale(
+                  scale: showAvatar && recording ? 1 : 0.7,
+                  duration: const Duration(milliseconds: 550),
+                  curve: Curves.easeOutBack,
+                  child: mine
+                      ? FaceAvatar(spec: mySpec, size: 230, talking: recording)
+                      : (av == null ? const SizedBox.shrink() : CircleAvatar(radius: 100, backgroundColor: av.color.withValues(alpha: 0.2), child: Icon(av.icon, size: 110, color: av.color))),
+                ),
+              ),
+            ),
+          ),
+        ),
         Positioned.fill(child: IgnorePointer(child: Container(color: const Color(0x26000000)))),
         SafeArea(
           child: Padding(
@@ -599,15 +596,15 @@ class _RecordScreenState extends State<RecordScreen> {
                       Text(reviewing ? 'PREVIEW' : recording ? 'REC  ${_fmt(seconds)}' : 'READY', style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
                     ]),
                   ),
-                  if (av != null) ...[
+                  if (av != null || mine) ...[
                     const SizedBox(width: 8),
                     Container(
                       padding: const EdgeInsets.fromLTRB(6, 5, 12, 5),
                       decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(999)),
                       child: Row(mainAxisSize: MainAxisSize.min, children: [
-                        CircleAvatar(radius: 10, backgroundColor: av.color, child: Icon(av.icon, size: 12, color: Colors.white)),
+                        if (mine) FaceAvatar(spec: mySpec, size: 20) else CircleAvatar(radius: 10, backgroundColor: av!.color, child: Icon(av.icon, size: 12, color: Colors.white)),
                         const SizedBox(width: 6),
-                        Text(av.name, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                        Text(mine ? 'Me' : av!.name, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
                       ]),
                     ),
                   ],

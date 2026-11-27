@@ -141,16 +141,84 @@ const platforms = [
 
 class Plan {
   final String id, name, blurb;
+  /// Dollars a month. 0 for Managed Services, which is priced for each business.
   final int price;
   final bool recommended;
   final List<String> features;
-  const Plan(this.id, this.name, this.price, this.blurb, this.features, {this.recommended = false});
+  /// Everything switched on for this plan, and whether it is still being built (shown as "in build").
+  final List<(String, bool)> onThisPlan;
+  const Plan(this.id, this.name, this.price, this.blurb, this.features, {this.recommended = false, this.onThisPlan = const []});
+  bool get custom => price == 0;
+  String get priceLabel => custom ? 'Custom' : '\$$price';
 }
 
+const _std = <(String, bool)>[
+  ('Credit for everyone you bring', false),
+  ('AI support, and a ticket when it cannot help', false),
+  ('Invitations and follow-ups written for you', false),
+];
+
+const _pro = <(String, bool)>[
+  ('Credit for everyone you bring', false),
+  ('AI support, and a ticket when it cannot help', false),
+  ('Posting to Facebook and Instagram for you', false),
+  ('Invitations and follow-ups written for you', false),
+  ('Embeds and the testimonial wall', false),
+  ('Automatic reminders, on your own schedule', false),
+  ('Your logo on every invitation', false),
+  ('Your logo on the thank-you screen', false),
+  ('Contact groups', false),
+  ('Subtitles on the video', false),
+  ('Your questions answered first', false),
+  ('Customer Loyalty rewards', true),
+];
+
+const _plus = <(String, bool)>[
+  ..._pro,
+  ('Posting on 11 platforms', true),
+  ('Remove the ViewRec watermark from your videos', false),
+  ('A month of posts planned in one sitting', true),
+  ('Design tools, templates and content workflows', true),
+  ('Discount coupons for customers who review you', true),
+];
+
 const plans = [
-  Plan('std', 'Standard', 49, 'Start collecting video reviews.', ['Unlimited video testimonials', 'Review page and free public listing', 'Email and text invitations', 'One reminder after 3 days', 'Show reviews on your website']),
-  Plan('pro', 'Pro', 149, 'More customers, not just more reviews.', ['Everything in Standard', 'Your logo on invitations', 'Up to 5 reminders', 'Facebook and Instagram posting', 'Embeds, wall and subtitles', 'Avatar mode for camera-shy customers'], recommended: true),
-  Plan('plus', 'Pro Plus', 299, 'Marketing on more automation.', ['Everything in Pro', 'Posting on 11 platforms', 'Plan a month of posts at once', 'Discount coupons for reviewers', 'Customer loyalty rewards', 'Setup call with our team']),
+  Plan('std', 'Standard', 49, 'For small businesses that want to start collecting video reviews.', [
+    'Unlimited video testimonials',
+    'A review page and a free public listing',
+    'Email and text invitations, written for you',
+    'One reminder, sent after 3 days',
+    'Jobsite video combined with the review',
+    'Show your reviews on your own website',
+    'Referral credit for businesses you bring',
+  ], onThisPlan: _std),
+  Plan('pro', 'Pro', 149, 'For busy businesses that want more customers, not just more reviews.', [
+    'Everything in Standard',
+    'Your logo on invitations and thank-you pages',
+    'Up to 5 reminders on your own schedule',
+    'Posting to Facebook and Instagram, with no monthly limit',
+    'Embeds, testimonial wall and video subtitles',
+    'Request button and Pro badge in the directory',
+    'Avatar mode for camera-shy customers',
+    'Your questions answered first',
+  ], recommended: true, onThisPlan: _pro),
+  Plan('plus', 'Pro Plus', 299, 'For businesses that want their marketing to run with more automation and content.', [
+    'Everything in Pro',
+    'Posting on 11 platforms, 22 posts a month',
+    'Plan a full month of posts in one sitting',
+    'Design tools, templates and content workflows',
+    'Discount coupons for customers who review you',
+    'Customer Loyalty rewards: up to 15 a month',
+    'A setup call with our team',
+  ], onThisPlan: _plus),
+  Plan('managed', 'Managed Services', 0, 'For businesses that want the ViewRec team to run their marketing.', [
+    'Everything in Pro Plus',
+    'Your own agent, available around the clock',
+    'We run your Google, Meta and Local Services ads',
+    'Your business profiles kept active',
+    'Customer rewards handled by our team',
+    'Scope and fee tailored to your business',
+  ], onThisPlan: [..._plus, ('Your Google, Meta and Local Services ads run for you', true), ('Your own agent, around the clock', true)]),
 ];
 
 const script = [

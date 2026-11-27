@@ -32,6 +32,8 @@ abstract class Repo {
   Future<PostsData> posts();
 
   Future<InsightsData> insights();
+  /// Media page results for the last [days] days (7, 30 or 90).
+  Future<MediaInsights> mediaInsights(int days);
 
   // ---- Media: stories, reels, follow, like, save, comments
   Future<List<StoryGroup>> stories();
@@ -75,6 +77,17 @@ abstract class Repo {
   Future<void> markNotificationRead(String id);
   Future<void> markAllNotificationsRead();
   Future<BillingInfo> billing();
+  /// Move to another plan. The server decides when the price changes.
+  Future<void> changePlan(String planId);
+  /// Stop the subscription. Nothing more is charged and the paid period keeps running.
+  Future<void> stopSubscription();
+  Future<void> resumeSubscription();
+  /// Starts adding a card. The card number is typed on the payment provider's own page, never in this app.
+  /// Returns the address of that page, or null when the card was added without one (sample data).
+  Future<String?> startCardSetup();
+  Future<void> removeCard();
+  /// Saves a card typed in the short form. The server passes it straight to the payment provider and keeps only the last four digits.
+  Future<void> saveCard({required String number, required String name, required String expiry, required String cvc});
 
   Future<AutomationSettings> automations();
   Future<void> saveAutomations(AutomationSettings s);
@@ -222,6 +235,35 @@ class MockRepo implements Repo {
         Post(id: 'p5', title: 'Priya Nair - video', platform: 'Facebook', when: '4 days ago', status: 'published', reactions: 52),
         Post(id: 'p6', title: 'Omar Haddad - carousel', platform: 'Instagram', when: '5 days ago', status: 'failed'),
       ]));
+
+  @override
+  Future<MediaInsights> mediaInsights(int days) {
+    final k = days / 7;
+    int n(int v) => (v * k).round();
+    return _wait(MediaInsights(
+      days: days,
+      reach: n(1840),
+      reachDelta: days == 7 ? 14 : (days == 30 ? 9 : -3),
+      impressions: n(3120),
+      profileVisits: n(236),
+      linkTaps: n(58),
+      likes: n(412),
+      comments: n(67),
+      saves: n(93),
+      shares: n(41),
+      followers: 1284,
+      followersGained: n(46),
+      followersLost: n(9),
+      daily: [for (var i = 0; i < (days > 30 ? 30 : days); i++) 160 + ((i * 37) % 140) + (i * 3)],
+      pctFollowers: 38,
+      topPosts: const [
+        TopPost('Roof replaced in a day', 'reel', 2310, 188, 21, 210),
+        TopPost('James Carter, 5 stars', 'post', 1450, 96, 12, 150),
+        TopPost('Before and after: Maple St', 'reel', 1120, 84, 9, 28),
+      ],
+      topPlaces: const [PlatformViews('Reels', 1210), PlatformViews('Explore', 760), PlatformViews('Profile', 540), PlatformViews('Feed', 330)],
+    ));
+  }
 
   @override
   Future<InsightsData> insights() => _wait(const InsightsData(
@@ -386,6 +428,19 @@ class MockRepo implements Repo {
       following: mine.any((r) => r.following),
       blocked: _blocked.contains(businessId),
       posts: mine,
+      highlights: [
+        Highlight(id: 'h1', title: 'Reviews', hue: const Color(0xFF3E94F5), items: [
+          StoryItem(hue: const Color(0xFF3E94F5), text: 'What our customers say', when: ''),
+          StoryItem(hue: const Color(0xFF0847A0), text: 'Five stars, again', when: ''),
+        ]),
+        Highlight(id: 'h2', title: 'Our team', hue: const Color(0xFF1FC9A4), items: [
+          StoryItem(hue: const Color(0xFF1FC9A4), text: 'Meet the people behind the work', when: ''),
+        ]),
+        Highlight(id: 'h3', title: 'Before and after', hue: const Color(0xFFFF6B5E), items: [
+          StoryItem(hue: const Color(0xFFFF6B5E), text: 'Before', when: ''),
+          StoryItem(hue: const Color(0xFFF2A100), text: 'After', when: ''),
+        ]),
+      ],
     ));
   }
 
@@ -535,18 +590,72 @@ class MockRepo implements Repo {
     await _wait(null);
   }
 
+  var _planName = 'Pro';
+  var _stopped = false;
+  var _card = '';
+
   @override
-  Future<BillingInfo> billing() => _wait(const BillingInfo(
-        plan: 'Pro',
-        status: 'trial',
-        trialDay: 4,
-        trialLength: 15,
-        afterTrialNote: 'then \$49 / month on Standard unless you choose another plan.',
-        billingEmail: 'demo@viewrec.com',
-        hasCard: false,
-        usage: [UsageItem('Invitations sent', 31, 'unlimited'), UsageItem('Reminders', 22, '5 per invitation'), UsageItem('Social posts', 9, '22'), UsageItem('Loyalty rewards', 2, '15')],
-        invoices: [Invoice('Trial activation', '\$1.00', '19 Nov 2026'), Invoice('Trial activation (test)', '\$1.00', '12 Nov 2026')],
-      ));
+  Future<BillingInfo> billing() {
+    final price = plans.firstWhere((p) => p.name == _planName).price;
+    return _wait(BillingInfo(
+      plan: _planName,
+      status: 'trial',
+      trialDay: 4,
+      trialLength: 15,
+      afterTrialNote: _stopped ? 'Your subscription is stopped. Nothing more will be charged.' : 'then \$$price a month on $_planName, on the same card.',
+      billingEmail: 'demo@viewrec.com',
+      hasCard: _card.isNotEmpty,
+      cardLabel: _card,
+      stopped: _stopped,
+      endsOn: _stopped ? '10 Dec 2026' : '',
+      usage: const [UsageItem('Invitations sent', 31, 'unlimited'), UsageItem('Reminders', 22, '5 per invitation'), UsageItem('Social posts', 9, '22'), UsageItem('Loyalty rewards', 2, '15')],
+      invoices: [
+        const Invoice('Activation · Visa ending 0002', '\$1', 'November 19, 2026'),
+        const Invoice('Activation · Visa ending 1111', '\$1', 'November 19, 2026'),
+        const Invoice('Activation', '\$1', 'November 19, 2026', status: 'pending'),
+        const Invoice('Activation · Visa ending 1111', '\$1', 'November 12, 2026'),
+      ],
+    ));
+  }
+
+  @override
+  Future<void> changePlan(String planId) async {
+    _planName = plans.firstWhere((p) => p.id == planId).name;
+    await _wait(null);
+  }
+
+  @override
+  Future<void> stopSubscription() async {
+    _stopped = true;
+    await _wait(null);
+  }
+
+  @override
+  Future<void> resumeSubscription() async {
+    _stopped = false;
+    await _wait(null);
+  }
+
+  @override
+  Future<String?> startCardSetup() async {
+    _card = 'Visa ending 4242';
+    await _wait(null);
+    return null;
+  }
+
+  @override
+  Future<void> removeCard() async {
+    _card = '';
+    await _wait(null);
+  }
+
+  @override
+  Future<void> saveCard({required String number, required String name, required String expiry, required String cvc}) async {
+    final digits = number.replaceAll(RegExp(r'\D'), '');
+    final brand = digits.startsWith('4') ? 'Visa' : (digits.startsWith('5') ? 'Mastercard' : (digits.startsWith('3') ? 'Amex' : 'Card'));
+    _card = '$brand ending ${digits.substring(digits.length - 4)}';
+    await _wait(null);
+  }
 
   @override
   Future<AutomationSettings> automations() => _wait(AutomationSettings.fromJson(_automations.toJson()));
@@ -677,6 +786,9 @@ class ApiRepo implements Repo {
 
   @override
   Future<PostsData> posts() async => PostsData.fromJson(await _get('/api/v1/posts'));
+
+  @override
+  Future<MediaInsights> mediaInsights(int days) async => MediaInsights.fromJson(await _get('/api/v1/insights/media?days=$days'));
 
   @override
   Future<InsightsData> insights() async => InsightsData.fromJson(await _get('/api/v1/insights'));
@@ -835,6 +947,28 @@ class ApiRepo implements Repo {
 
   @override
   Future<BillingInfo> billing() async => BillingInfo.fromJson(await _get('/api/v1/billing'));
+
+  @override
+  Future<void> changePlan(String planId) => _send('PUT', '/api/v1/billing/plan', {'planId': planId});
+
+  @override
+  Future<void> stopSubscription() => _send('POST', '/api/v1/billing/stop');
+
+  @override
+  Future<void> resumeSubscription() => _send('POST', '/api/v1/billing/resume');
+
+  @override
+  Future<String?> startCardSetup() async {
+    final r = await _send('POST', '/api/v1/billing/card-setup');
+    return (r is Map ? r['url'] : null) as String?;
+  }
+
+  @override
+  Future<void> removeCard() => _send('DELETE', '/api/v1/billing/card');
+
+  @override
+  Future<void> saveCard({required String number, required String name, required String expiry, required String cvc}) =>
+      _send('POST', '/api/v1/billing/card', {'number': number.replaceAll(RegExp(r'\D'), ''), 'name': name, 'expiry': expiry, 'cvc': cvc});
 
   @override
   Future<AutomationSettings> automations() async => AutomationSettings.fromJson(await _get('/api/v1/automations'));

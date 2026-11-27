@@ -307,15 +307,7 @@ class _ReelCardState extends State<_ReelCard> {
               child: Text('${compact(r.likes)} likes', key: ValueKey(r.likes), style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14)),
             ),
             const SizedBox(height: 4),
-            Text.rich(
-              TextSpan(children: [
-                TextSpan(text: '${r.business}  ', style: const TextStyle(fontWeight: FontWeight.w800)),
-                TextSpan(text: r.caption),
-              ]),
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 14, height: 1.4),
-            ),
+            CaptionText(name: r.business, text: r.caption),
             const SizedBox(height: 6),
             GestureDetector(
               onTap: () => showCommentsSheet(context, r, widget.onChanged),
