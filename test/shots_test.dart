@@ -55,6 +55,7 @@ void main() {
         Directory(out).createSync(recursive: true);
         File('$out/${e.key}.png').writeAsBytesSync(bytes!.buffer.asUint8List());
       });
+      await tester.pump(const Duration(seconds: 8));
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump();
     });

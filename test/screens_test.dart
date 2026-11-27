@@ -26,6 +26,7 @@ import 'package:viewrec/screens/record.dart';
 import 'package:viewrec/screens/settings.dart';
 import 'package:viewrec/screens/video_detail.dart';
 import 'package:viewrec/screens/welcome.dart';
+import 'package:viewrec/screens/sign_in.dart';
 import 'package:viewrec/shell.dart';
 import 'package:viewrec/theme.dart';
 

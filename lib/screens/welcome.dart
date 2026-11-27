@@ -6,6 +6,7 @@ import '../motion.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import '../shell.dart';
+import 'sign_in.dart';
 
 void _enter(BuildContext context) =>
     Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder: (_) => const Shell()), (r) => false);
@@ -91,31 +92,6 @@ class WelcomeScreen extends StatelessWidget {
       ]),
     );
   }
-}
-
-class SignInScreen extends StatefulWidget {
-  const SignInScreen({super.key});
-  @override
-  State<SignInScreen> createState() => _SignInScreenState();
-}
-
-class _SignInScreenState extends State<SignInScreen> {
-  bool hide = true;
-  @override
-  Widget build(BuildContext context) => SubPage('Sign in', children: [
-        const SizedBox(height: 8),
-        const H1('Welcome back', size: 28),
-        const SizedBox(height: 6),
-        const Muted('Sign in to see your testimonials.'),
-        const SizedBox(height: 24),
-        const Field('Email', initial: 'demo@viewrec.com', keyboard: TextInputType.emailAddress),
-        const Field('Password', initial: 'password'),
-        Align(alignment: Alignment.centerRight, child: TextButton(onPressed: () => showMsg(context, 'Reset link sent'), child: const Text('Forgot password?'))),
-        const SizedBox(height: 8),
-        AppButton('Sign in', onTap: () => _enter(context)),
-        const SizedBox(height: 12),
-        AppButton('Continue with Google', icon: Icons.g_mobiledata_rounded, style: BtnStyle.ghost, onTap: () => _enter(context)),
-      ]);
 }
 
 class StartTrialScreen extends StatefulWidget {

@@ -23,29 +23,31 @@ class OverviewScreen extends StatelessWidget {
   final ShellState shell;
   const OverviewScreen({super.key, required this.shell});
 
-  Future<(OverviewStats, List<Video>, List<StoryGroup>)> _load() async {
+  Future<(OverviewStats, List<Video>, List<StoryGroup>, InsightsData?)> _load() async {
     final stats = await repo.overview();
     final videos = await repo.videos();
+    // The trend in the blue card is a bonus too: without it the card still shows.
+    final insights = await repo.insights().then<InsightsData?>((v) => v).catchError((_) => null);
     // Stories are a bonus on Home: if they fail to load, the rest of the page still shows.
     final stories = await repo.stories().catchError((_) => <StoryGroup>[]);
-    return (stats, videos, stories);
+    return (stats, videos, stories, insights);
   }
 
   @override
   Widget build(BuildContext context) => ValueListenableBuilder<int>(
         valueListenable: mediaRevision,
-        builder: (context, rev, _) => AsyncView<(OverviewStats, List<Video>, List<StoryGroup>)>(
+        builder: (context, rev, _) => AsyncView<(OverviewStats, List<Video>, List<StoryGroup>, InsightsData?)>(
           key: ValueKey(rev),
           load: _load,
           builder: (context, data, refresh) => RefreshIndicator(
             color: C.primary,
             onRefresh: refresh,
-            child: _body(context, data.$1, data.$2, data.$3),
+            child: _body(context, data.$1, data.$2, data.$3, data.$4),
           ),
         ),
       );
 
-  Widget _body(BuildContext context, OverviewStats s, List<Video> videos, List<StoryGroup> stories) {
+  Widget _body(BuildContext context, OverviewStats s, List<Video> videos, List<StoryGroup> stories, InsightsData? insights) {
     var n = 0;
     return AppPage(reveal: false, children: [
       if (stories.isNotEmpty) ...[
@@ -54,7 +56,7 @@ class OverviewScreen extends StatelessWidget {
       ],
       EntitlementBanner(onBilling: () => shell.goTo(9)),
       Padding(padding: const EdgeInsets.only(left: 4, bottom: 12), child: Text(_message(s), style: TextStyle(fontSize: 15, height: 1.4, color: C.muted, fontWeight: FontWeight.w600))),
-      _hero(context, s).reveal(context, n++),
+      _hero(context, s, insights).reveal(context, n++),
       const SizedBox(height: 18),
       _quickActions(context).reveal(context, n++),
       const SizedBox(height: 18),
@@ -110,7 +112,19 @@ class OverviewScreen extends StatelessWidget {
   }
 
   // ---------- hero ----------
-  Widget _hero(BuildContext context, OverviewStats s) => ClipRRect(
+  /// Change in views this week against last week, or null when there is not enough to compare.
+  int? _trend(InsightsData? d) {
+    if (d == null || d.weeklyViews.length < 2) return null;
+    final prev = d.weeklyViews[d.weeklyViews.length - 2];
+    if (prev <= 0) return null;
+    return ((d.weeklyViews.last - prev) * 100 / prev).round();
+  }
+
+  Widget _hero(BuildContext context, OverviewStats s, InsightsData? insights) {
+    final trend = _trend(insights);
+    void reviews() => shell.goTo(1);
+    void details() => shell.push(const InsightsScreen());
+    return ClipRRect(
         borderRadius: BorderRadius.circular(36),
         child: Container(
           decoration: BoxDecoration(
@@ -124,51 +138,83 @@ class OverviewScreen extends StatelessWidget {
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Row(children: [
                   Flexible(
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
-                      decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.16), borderRadius: BorderRadius.circular(999)),
-                      child: const Row(mainAxisSize: MainAxisSize.min, children: [
-                        Icon(PIconsBold.videoCamera, size: 13, color: Colors.white),
-                        SizedBox(width: 6),
-                        Flexible(child: Text('Videos', maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white))),
-                      ]),
+                    child: Pressable(
+                      key: const ValueKey('hero_videos'),
+                      onTap: reviews,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
+                        decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.16), borderRadius: BorderRadius.circular(999)),
+                        child: Row(mainAxisSize: MainAxisSize.min, children: [
+                          const Icon(PIconsBold.videoCamera, size: 13, color: Colors.white),
+                          const SizedBox(width: 6),
+                          Flexible(child: Text(s.waiting > 0 ? '${s.waiting} waiting for you' : 'All videos', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white))),
+                          const SizedBox(width: 4),
+                          const Icon(PIconsBold.caretRight, size: 11, color: Colors.white),
+                        ]),
+                      ),
                     ),
                   ),
                   const SizedBox(width: 8),
                   const Spacer(),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-                    decoration: BoxDecoration(color: const Color(0xFF1FC9A4).withValues(alpha: 0.2), borderRadius: BorderRadius.circular(999)),
-                    child: const Row(mainAxisSize: MainAxisSize.min, children: [
-                      Icon(PIconsBold.trendUp, size: 13, color: Color(0xFF5BE8C6)),
-                      SizedBox(width: 4),
-                      Text('+12% this week', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xFF5BE8C6))),
-                    ]),
-                  ),
+                  if (trend != null)
+                    Pressable(
+                      key: const ValueKey('hero_trend'),
+                      onTap: details,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+                        decoration: BoxDecoration(color: (trend >= 0 ? const Color(0xFF1FC9A4) : const Color(0xFFFF6B5E)).withValues(alpha: 0.2), borderRadius: BorderRadius.circular(999)),
+                        child: Row(mainAxisSize: MainAxisSize.min, children: [
+                          Icon(trend >= 0 ? PIconsBold.trendUp : Icons.trending_down_rounded, size: 13, color: trend >= 0 ? const Color(0xFF5BE8C6) : const Color(0xFFFFB3AB)),
+                          const SizedBox(width: 4),
+                          Text('${trend >= 0 ? '+' : ''}$trend% views this week', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: trend >= 0 ? const Color(0xFF5BE8C6) : const Color(0xFFFFB3AB))),
+                        ]),
+                      ),
+                    ),
                 ]),
                 const SizedBox(height: 18),
                 Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
                   Expanded(
-                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    child: Pressable(
+                      key: const ValueKey('hero_count'),
+                      onTap: reviews,
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                       CountUp(s.testimonials, style: const TextStyle(fontSize: 60, fontWeight: FontWeight.w800, letterSpacing: -3, height: 1, color: Colors.white)),
                       const SizedBox(height: 6),
                       Text('testimonials collected', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.white.withValues(alpha: 0.8))),
                     ]),
+                    ),
                   ),
-                  AnimatedRing(
-                    progress: s.averageRating / 5,
-                    size: 78,
-                    stroke: 8,
-                    color: Colors.white,
-                    track: Colors.white.withValues(alpha: 0.2),
-                    child: Column(mainAxisSize: MainAxisSize.min, children: [
-                      CountUp(s.averageRating, decimals: 1, style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w800, color: Colors.white, height: 1.05)),
-                      Icon(PIconsFill.star, size: 11, color: Colors.white.withValues(alpha: 0.9)),
-                    ]),
+                  Pressable(
+                    key: const ValueKey('hero_rating'),
+                    onTap: reviews,
+                    child: AnimatedRing(
+                      progress: s.averageRating / 5,
+                      size: 78,
+                      stroke: 8,
+                      color: Colors.white,
+                      track: Colors.white.withValues(alpha: 0.2),
+                      child: Column(mainAxisSize: MainAxisSize.min, children: [
+                        CountUp(s.averageRating, decimals: 1, style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w800, color: Colors.white, height: 1.05)),
+                        Icon(PIconsFill.star, size: 11, color: Colors.white.withValues(alpha: 0.9)),
+                      ]),
+                    ),
                   ),
                 ]),
                 const SizedBox(height: 14),
-                Sparkline(values: [2, 3, 3, 5, 4, 6, 5, s.testimonials + 1], color: Colors.white, height: 58),
+                Pressable(
+                  key: const ValueKey('hero_chart'),
+                  onTap: details,
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Sparkline(values: insights != null && insights.weeklyViews.length > 1 ? [for (final v in insights.weeklyViews) v] : [2, 3, 3, 5, 4, 6, 5, s.testimonials + 1], color: Colors.white, height: 58),
+                    const SizedBox(height: 6),
+                    Row(children: [
+                      Expanded(child: Text(insights != null ? 'Views, last ${insights.weeklyViews.length} weeks' : 'Last 8 weeks', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: Colors.white.withValues(alpha: 0.7)))),
+                      Text('See details', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w800, color: Colors.white.withValues(alpha: 0.95))),
+                      const SizedBox(width: 3),
+                      Icon(PIconsBold.caretRight, size: 11, color: Colors.white.withValues(alpha: 0.95)),
+                    ]),
+                  ]),
+                ),
                 const SizedBox(height: 10),
                 Container(
                   padding: const EdgeInsets.fromLTRB(14, 11, 6, 11),
@@ -176,7 +222,14 @@ class OverviewScreen extends StatelessWidget {
                   child: Row(children: [
                     Icon(PIconsRegular.link, size: 16, color: Colors.white.withValues(alpha: 0.8)),
                     const SizedBox(width: 8),
-                    Expanded(child: Text(s.videoLink, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.white.withValues(alpha: 0.95)))),
+                    Expanded(
+                      child: GestureDetector(
+                        key: const ValueKey('hero_link'),
+                        behavior: HitTestBehavior.opaque,
+                        onTap: () => showVideoLinkSheet(context),
+                        child: Text(s.videoLink, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.white.withValues(alpha: 0.95))),
+                      ),
+                    ),
                     Pressable(
                       onTap: () {
                         Clipboard.setData(ClipboardData(text: s.videoLink));
@@ -195,6 +248,7 @@ class OverviewScreen extends StatelessWidget {
           ]),
         ),
       );
+  }
 
   // ---------- quick actions ----------
   Widget _quickActions(BuildContext context) {
