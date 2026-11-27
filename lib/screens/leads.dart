@@ -196,7 +196,7 @@ class _LeadsBodyState extends State<_LeadsBody> {
             ),
             ),
           ),
-        if (shown.isEmpty) const EmptyState(Icons.handshake_rounded, 'No requests here', 'New requests show up as soon as they arrive.'),
+        if (shown.isEmpty) const EmptyState(Icons.handshake_rounded, 'No requests here', 'People who ask for your work show up here as soon as they get in touch.'),
         const SizedBox(height: 80),
       ]),
       ),

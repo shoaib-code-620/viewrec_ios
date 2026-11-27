@@ -731,7 +731,10 @@ class InfoBanner extends StatelessWidget {
 class EmptyState extends StatelessWidget {
   final IconData icon;
   final String title, body;
-  const EmptyState(this.icon, this.title, this.body, {super.key});
+  /// An optional button that says what to do next.
+  final String? action;
+  final VoidCallback? onAction;
+  const EmptyState(this.icon, this.title, this.body, {super.key, this.action, this.onAction});
   @override
   Widget build(BuildContext context) => Padding(
         padding: const EdgeInsets.symmetric(vertical: 36),
@@ -759,6 +762,10 @@ class EmptyState extends StatelessWidget {
           Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18, letterSpacing: -0.3)),
           const SizedBox(height: 6),
           Muted(body, size: 13.5, align: TextAlign.center),
+          if (action != null && onAction != null) ...[
+            const SizedBox(height: 16),
+            IntrinsicWidth(child: AppButton(action!, small: true, onTap: onAction)),
+          ],
         ]),
       );
 }

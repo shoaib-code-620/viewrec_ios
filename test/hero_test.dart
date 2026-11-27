@@ -49,4 +49,20 @@ void main() {
     expect(find.byKey(const ValueKey('hero_count')), findsNothing, reason: 'moved off Home to Reviews');
     await _finish(t);
   });
+
+  testWidgets('Get started lists the real workflow steps, a few at a time, and opens the right page', (t) async {
+    await _home(t);
+    expect(find.text('Get started'), findsOneWidget);
+    expect(find.byKey(const ValueKey('check_Add your logo')), findsOneWidget);
+    expect(find.text('Show all 13 steps'), findsOneWidget);
+    expect(find.byKey(const ValueKey('check_Set your reminders')), findsNothing, reason: 'done steps are hidden until you ask for all');
+    await t.ensureVisible(find.byKey(const ValueKey('check_toggle')));
+    await _pumpFor(t, 300);
+    await t.tap(find.byKey(const ValueKey('check_toggle')));
+    await _pumpFor(t, 600);
+    expect(find.text('Show less'), findsOneWidget);
+    expect(find.byKey(const ValueKey('check_Set your reminders')), findsOneWidget);
+    expect(find.byKey(const ValueKey('check_Publish your first video')), findsOneWidget);
+    await _finish(t);
+  });
 }

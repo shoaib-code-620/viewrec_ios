@@ -3,6 +3,9 @@
 
 class OverviewStats {
   final int testimonials, videos, waiting, customers, invitesSent, reviewPages, linkedAccounts, embeds;
+  /// For the Get started checklist: what has been done along the way.
+  final int approved, published;
+  final bool hasLogo, verified, hasGroup, remindersSet, hasCard;
   final double averageRating;
   final String videoLink;
   const OverviewStats({
@@ -16,6 +19,13 @@ class OverviewStats {
     required this.linkedAccounts,
     required this.embeds,
     required this.videoLink,
+    this.approved = 0,
+    this.published = 0,
+    this.hasLogo = false,
+    this.verified = false,
+    this.hasGroup = false,
+    this.remindersSet = false,
+    this.hasCard = false,
   });
   factory OverviewStats.fromJson(Map<String, dynamic> j) => OverviewStats(
         testimonials: j['testimonials'] ?? 0,
@@ -28,6 +38,13 @@ class OverviewStats {
         linkedAccounts: j['linkedAccounts'] ?? 0,
         embeds: j['embeds'] ?? 0,
         videoLink: j['videoLink'] ?? '',
+        approved: j['approved'] ?? 0,
+        published: j['published'] ?? 0,
+        hasLogo: j['hasLogo'] == true,
+        verified: j['verified'] == true,
+        hasGroup: j['hasGroup'] == true,
+        remindersSet: j['remindersSet'] == true,
+        hasCard: j['hasCard'] == true,
       );
 }
 

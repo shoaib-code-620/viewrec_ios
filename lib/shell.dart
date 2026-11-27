@@ -8,6 +8,7 @@ import './icons.dart';
 import 'liquid_bar.dart';
 import 'motion.dart';
 import 'order_store.dart';
+import 'guide.dart';
 import 'theme.dart';
 import 'theme_controller.dart';
 import 'widgets.dart';
@@ -100,6 +101,15 @@ class ShellState extends State<Shell> {
   void initState() {
     super.initState();
     _loadUnreadNotifications();
+    GuideStore.load();
+    if (GuideStore.pendingTour) {
+      // Someone just signed in or started the trial: show the welcome tour once.
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        GuideStore.pendingTour = false;
+        await GuideStore.load();
+        if (mounted && !GuideStore.tourSeen) GuideStore.showTour(context);
+      });
+    }
     repo.leads().then((l) {
       if (mounted) setState(() => unread = l.where((x) => x.status == 'new').length);
     }).catchError((_) {});
@@ -200,6 +210,7 @@ class ShellState extends State<Shell> {
             ),
             child: SafeArea(bottom: false, child: _header(sec)),
           ),
+          GuideTip(section: index),
           Expanded(
             child: NotificationListener<ScrollUpdateNotification>(
               onNotification: (n) {
@@ -582,6 +593,28 @@ class _MoreGridState extends State<_MoreGrid> {
           ]),
           const SizedBox(height: 14),
           Pills(const ['Light', 'Dark', 'Special'], ThemeController.instance.mode.index, (i) => ThemeController.instance.setMode(AppThemeMode.values[i])),
+        ]),
+      ).reveal(context, n++, 0.05),
+      const SizedBox(height: 12),
+      AppCard(
+        key: const ValueKey('more_help'),
+        onTap: () => openHelp(context),
+        child: Row(children: [
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(borderRadius: BorderRadius.circular(14), color: C.primarySoft),
+            child: Icon(Icons.help_outline_rounded, size: 22, color: C.primary),
+          ),
+          const SizedBox(width: 14),
+          const Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('Help and guide', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+              SizedBox(height: 2),
+              Muted('Take the tour, tips and how each step works', size: 12.5),
+            ]),
+          ),
+          Icon(Icons.chevron_right_rounded, color: C.muted),
         ]),
       ).reveal(context, n++, 0.05),
       const SizedBox(height: 8),

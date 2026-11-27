@@ -4,6 +4,7 @@ import '../async_view.dart';
 import '../data.dart';
 import '../models.dart';
 import '../repo.dart';
+import '../shell.dart';
 import '../theme.dart';
 import '../widgets.dart';
 
@@ -71,7 +72,7 @@ class _PublishingBodyState extends State<_PublishingBody> {
         const SizedBox(height: 16),
         Pills(const ['All', 'Scheduled', 'Published', 'Failed'], tab, (i) => setState(() => tab = i)),
         const SizedBox(height: 12),
-        if (shown.isEmpty) const EmptyState(Icons.rocket_launch_rounded, 'No posts here', 'Create content and schedule it to see it here.'),
+        if (shown.isEmpty) EmptyState(Icons.rocket_launch_rounded, 'No posts here', 'Create content and schedule it to see it here.', action: 'Create a post', onAction: () => context.findAncestorStateOfType<ShellState>()?.goTo(2)),
         for (final p in shown)
           Padding(
             padding: const EdgeInsets.only(bottom: 10),

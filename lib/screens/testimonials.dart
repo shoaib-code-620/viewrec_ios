@@ -4,6 +4,7 @@ import '../async_view.dart';
 import '../data.dart';
 import '../motion.dart';
 import '../repo.dart';
+import '../shell.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'video_detail.dart';
@@ -51,7 +52,7 @@ class _TestimonialsScreenState extends State<TestimonialsScreen> {
                 child: Column(
                   key: ValueKey(f),
                   children: [
-                    if (shown.isEmpty) const EmptyState(PIconsRegular.quotes, 'Nothing here yet', 'Testimonials appear here when customers reply.'),
+                    if (shown.isEmpty) EmptyState(PIconsRegular.quotes, 'Nothing here yet', 'Testimonials appear here when customers reply. Send an invitation to get your first one.', action: 'Send an invitation', onAction: () => context.findAncestorStateOfType<ShellState>()?.goTo(3)),
                     for (var i = 0; i < shown.length; i++)
                       Padding(
                         padding: const EdgeInsets.only(bottom: 16),

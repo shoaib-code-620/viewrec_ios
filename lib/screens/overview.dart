@@ -12,6 +12,7 @@ import '../theme.dart';
 import '../widgets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../entitlement.dart';
+import '../guide.dart';
 import '../media_data.dart';
 import 'insights.dart';
 import 'media.dart' show StoriesRow;
@@ -281,63 +282,150 @@ class OverviewScreen extends StatelessWidget {
 
   // ---------- checklist ----------
   Widget _checklist(BuildContext context, OverviewStats s) {
+    // In the order the work really happens: set up, add customers, collect, approve, share.
     // (label, done, section to open)
     final tasks = <(String, bool, int)>[
       ('Set up your business profile', true, 10),
+      ('Add your logo', s.hasLogo, 10),
+      ('Get your business verified', s.verified, 19),
       ('Connect an account', s.linkedAccounts > 0, 8),
+      ('Add a card for after your trial', s.hasCard, 9),
       ('Add your customers', s.customers > 0, 3),
+      ('Make a group of customers', s.hasGroup, 3),
+      ('Set your reminders', s.remindersSet, 5),
       ('Send your first invitations', s.invitesSent > 0, 3),
       ('Collect your first testimonial', s.testimonials > 0, 1),
+      ('Approve your first testimonial', s.approved > 0, 1),
+      ('Publish your first video', s.published > 0, 7),
       ('Put your reviews on your website', s.embeds > 0, 23),
     ];
+    if (tasks.every((t) => t.$2)) return const _AllSetCard();
+    return Padding(padding: const EdgeInsets.only(top: 14), child: _ChecklistCard(tasks: tasks, onOpen: shell.goTo));
+  }
+}
+
+/// Shown once when every step is done, then it goes away for good.
+class _AllSetCard extends StatelessWidget {
+  const _AllSetCard();
+  @override
+  Widget build(BuildContext context) => ValueListenableBuilder<int>(
+        valueListenable: GuideStore.revision,
+        builder: (context, _, __) => GuideStore.setupDoneSeen
+            ? const SizedBox.shrink()
+            : Padding(
+                padding: const EdgeInsets.only(top: 14),
+                child: AppCard(
+                  key: const ValueKey('all_set'),
+                  child: Row(children: [
+                    CircleAvatar(radius: 24, backgroundColor: C.green, child: const Icon(Icons.check_rounded, color: Colors.white, size: 28)),
+                    const SizedBox(width: 14),
+                    const Expanded(
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Text('You are all set', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 17)),
+                        SizedBox(height: 2),
+                        Muted('Every setup step is done. New testimonials will show here.', size: 12.5),
+                      ]),
+                    ),
+                    TextButton(onPressed: GuideStore.setupDoneShown, child: Text('Done', style: TextStyle(color: C.primary, fontWeight: FontWeight.w800))),
+                  ]),
+                ),
+              ),
+      );
+}
+
+/// Get started: the steps of the real workflow with a progress ring. It shows the next few steps, and all of them on request.
+class _ChecklistCard extends StatefulWidget {
+  final List<(String, bool, int)> tasks;
+  final void Function(int) onOpen;
+  const _ChecklistCard({required this.tasks, required this.onOpen});
+  @override
+  State<_ChecklistCard> createState() => _ChecklistCardState();
+}
+
+class _ChecklistCardState extends State<_ChecklistCard> {
+  bool all = false;
+  static const _next = 4;
+
+  @override
+  Widget build(BuildContext context) {
+    final tasks = widget.tasks;
     final done = tasks.where((t) => t.$2).length;
-    if (done == tasks.length) return const SizedBox.shrink();
-    return Padding(
-      padding: const EdgeInsets.only(top: 14),
-      child: AppCard(
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Row(children: [
-            AnimatedRing(
-              progress: done / tasks.length,
-              size: 52,
-              stroke: 6,
-              color: C.primary,
-              track: C.surface2,
-              child: Text('$done/${tasks.length}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800)),
-            ),
-            const SizedBox(width: 14),
-            const Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text('Get started', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 17)),
-                SizedBox(height: 2),
-                Muted('Finish setup to get more videos', size: 12.5),
-              ]),
-            ),
+    // Collapsed: the next few steps still to do, so the card stays short as the list grows.
+    final pending = tasks.where((t) => !t.$2).toList();
+    final shown = all ? tasks : pending.take(_next).toList();
+    return AppCard(
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          AnimatedRing(
+            progress: done / tasks.length,
+            size: 52,
+            stroke: 6,
+            color: C.primary,
+            track: C.surface2,
+            child: Text('$done/${tasks.length}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800)),
+          ),
+          const SizedBox(width: 14),
+          const Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('Get started', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 17)),
+              SizedBox(height: 2),
+              Muted('Finish setup to get more videos', size: 12.5),
+            ]),
+          ),
+        ]),
+        const SizedBox(height: 8),
+        AnimatedSize(
+          duration: kMed,
+          curve: kCurve,
+          alignment: Alignment.topCenter,
+          child: Column(children: [
+            for (final t in shown)
+              InkWell(
+                key: ValueKey('check_${t.$1}'),
+                onTap: t.$2 ? null : () => widget.onOpen(t.$3),
+                borderRadius: BorderRadius.circular(12),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  child: Row(children: [
+                    AnimatedSwitcher(
+                      duration: kMed,
+                      transitionBuilder: (c, a) => ScaleTransition(scale: CurvedAnimation(parent: a, curve: Curves.elasticOut), child: c),
+                      child: Icon(t.$2 ? PIconsFill.checkCircle : PIconsRegular.circle, key: ValueKey(t.$2), size: 22, color: t.$2 ? C.green : C.muted),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(t.$1,
+                          style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: t.$2 ? C.muted : C.text, decoration: t.$2 ? TextDecoration.lineThrough : null)),
+                    ),
+                    if (!t.$2) Icon(PIconsBold.caretRight, size: 14, color: C.muted),
+                  ]),
+                ),
+              ),
           ]),
-          const SizedBox(height: 8),
-          for (final t in tasks)
-            InkWell(
-              onTap: t.$2 ? null : () => shell.goTo(t.$3),
-              borderRadius: BorderRadius.circular(12),
+        ),
+        Row(children: [
+          if (tasks.length > _next)
+            GestureDetector(
+              key: const ValueKey('check_toggle'),
+              behavior: HitTestBehavior.opaque,
+              onTap: () => setState(() => all = !all),
               child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 10),
-                child: Row(children: [
-                  AnimatedSwitcher(
-                    duration: kMed,
-                    transitionBuilder: (c, a) => ScaleTransition(scale: CurvedAnimation(parent: a, curve: Curves.elasticOut), child: c),
-                    child: Icon(t.$2 ? PIconsFill.checkCircle : PIconsRegular.circle, key: ValueKey(t.$2), size: 22, color: t.$2 ? C.green : C.muted),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(t.$1,
-                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: t.$2 ? C.muted : C.text, decoration: t.$2 ? TextDecoration.lineThrough : null)),
-                  ),
-                  if (!t.$2) Icon(PIconsBold.caretRight, size: 14, color: C.muted),
-                ]),
+                padding: const EdgeInsets.only(top: 6, bottom: 2),
+                child: Text(all ? 'Show less' : 'Show all ${tasks.length} steps', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13.5, color: C.primary)),
               ),
             ),
+          const Spacer(),
+          GestureDetector(
+            key: const ValueKey('check_help'),
+            behavior: HitTestBehavior.opaque,
+            onTap: () => openHelp(context),
+            child: Padding(
+              padding: const EdgeInsets.only(top: 6, bottom: 2),
+              child: Text('Need help?', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13.5, color: C.muted)),
+            ),
+          ),
         ]),
-      ),
+      ]),
     );
   }
 }

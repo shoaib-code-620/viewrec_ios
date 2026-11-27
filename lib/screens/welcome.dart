@@ -5,11 +5,14 @@ import '../liquid_widgets.dart';
 import '../motion.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import '../guide.dart';
 import '../shell.dart';
 import 'sign_in.dart';
 
-void _enter(BuildContext context) =>
-    Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder: (_) => const Shell()), (r) => false);
+void _enter(BuildContext context) {
+  GuideStore.pendingTour = true; // the welcome tour shows once, on the first visit
+  Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder: (_) => const Shell()), (r) => false);
+}
 
 class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({super.key});

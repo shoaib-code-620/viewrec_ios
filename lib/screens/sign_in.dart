@@ -2,12 +2,15 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../liquid_widgets.dart';
 import '../motion.dart';
+import '../guide.dart';
 import '../shell.dart';
 import '../theme.dart';
 import '../widgets.dart';
 
-void _enter(BuildContext context) =>
-    Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder: (_) => const Shell()), (r) => false);
+void _enter(BuildContext context) {
+  GuideStore.pendingTour = true; // the welcome tour shows once, on the first visit
+  Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder: (_) => const Shell()), (r) => false);
+}
 
 /// Sign in, laid out like Claude's: the name at the top, a quiet animation in the middle, and the ways to continue at the bottom.
 class SignInScreen extends StatelessWidget {

@@ -162,6 +162,13 @@ class MockRepo implements Repo {
         linkedAccounts: _accounts.length,
         embeds: 0,
         videoLink: 'https://viewrec.com/r/demo',
+        approved: _videos.where((v) => v.status == 'approved' || v.status == 'published').length,
+        published: _videos.where((v) => v.status == 'published' || v.platforms.isNotEmpty).length,
+        hasLogo: false,
+        verified: false,
+        hasGroup: true,
+        remindersSet: true,
+        hasCard: _card.isNotEmpty,
       ));
 
   @override

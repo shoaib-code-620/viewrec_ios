@@ -42,6 +42,11 @@ void main() {
     for (var i = 0; i < 20; i++) {
       await t.pump(const Duration(milliseconds: 100));
     }
+    expect(find.text('Add your customers'), findsOneWidget, reason: 'first sign-in opens the welcome tour');
+    await t.tap(find.byKey(const ValueKey('tour_skip')));
+    for (var i = 0; i < 20; i++) {
+      await t.pump(const Duration(milliseconds: 100));
+    }
     expect(find.byType(Shell), findsOneWidget);
     for (var i = 0; i < 80; i++) {
       await t.pump(const Duration(milliseconds: 100));
