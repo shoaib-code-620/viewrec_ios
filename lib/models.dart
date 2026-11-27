@@ -207,7 +207,9 @@ class AutomationSettings {
 
 class BusinessProfile {
   String name, category, phone, email, website, area, about;
-  BusinessProfile({this.name = '', this.category = '', this.phone = '', this.email = '', this.website = '', this.area = '', this.about = ''});
+  /// The owner's name, used in the welcome on Home.
+  String owner;
+  BusinessProfile({this.owner = '', this.name = '', this.category = '', this.phone = '', this.email = '', this.website = '', this.area = '', this.about = ''});
   factory BusinessProfile.fromJson(Map<String, dynamic> j) => BusinessProfile(
         name: j['name'] ?? '',
         category: j['category'] ?? '',
@@ -216,8 +218,9 @@ class BusinessProfile {
         website: j['website'] ?? '',
         area: j['area'] ?? '',
         about: j['about'] ?? '',
+        owner: j['owner'] ?? '',
       );
-  Map<String, dynamic> toJson() => {'name': name, 'category': category, 'phone': phone, 'email': email, 'website': website, 'area': area, 'about': about};
+  Map<String, dynamic> toJson() => {'owner': owner, 'name': name, 'category': category, 'phone': phone, 'email': email, 'website': website, 'area': area, 'about': about};
 }
 
 class PlatformViews {

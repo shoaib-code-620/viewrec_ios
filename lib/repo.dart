@@ -141,6 +141,7 @@ class MockRepo implements Repo {
   ];
   var _automations = AutomationSettings();
   var _profile = BusinessProfile(
+    owner: 'Jordan Hartley',
     name: 'Hartley Roofing',
     category: 'Home & Trades',
     phone: '+44 161 496 0123',

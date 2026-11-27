@@ -14,6 +14,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../entitlement.dart';
 import '../guide.dart';
 import '../media_data.dart';
+import 'home_hero.dart';
 import 'insights.dart';
 import 'media.dart' show StoriesRow;
 import 'invite_composer.dart';
@@ -57,7 +58,7 @@ class OverviewScreen extends StatelessWidget {
       ],
       EntitlementBanner(onBilling: () => shell.goTo(9)),
       Padding(padding: const EdgeInsets.only(left: 4, bottom: 12), child: Text(_message(s), style: TextStyle(fontSize: 15, height: 1.4, color: C.muted, fontWeight: FontWeight.w600))),
-      _hero(context, s, insights).reveal(context, n++),
+      HomeHero(shell: shell, analytics: _hero(context, s, insights)).reveal(context, n++),
       const SizedBox(height: 18),
       _quickActions(context).reveal(context, n++),
       const SizedBox(height: 18),
@@ -201,12 +202,12 @@ class OverviewScreen extends StatelessWidget {
                     ),
                   ),
                 ]),
-                const SizedBox(height: 14),
+                const SizedBox(height: 20),
                 Pressable(
                   key: const ValueKey('hero_chart'),
                   onTap: details,
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Sparkline(values: insights != null && insights.weeklyViews.length > 1 ? [for (final v in insights.weeklyViews) v] : [2, 3, 3, 5, 4, 6, 5, s.testimonials + 1], color: Colors.white, height: 58),
+                    Sparkline(values: insights != null && insights.weeklyViews.length > 1 ? [for (final v in insights.weeklyViews) v] : [2, 3, 3, 5, 4, 6, 5, s.testimonials + 1], color: Colors.white, height: 72),
                     const SizedBox(height: 6),
                     Row(children: [
                       Expanded(child: Text(insights != null ? 'Views, last ${insights.weeklyViews.length} weeks' : 'Last 8 weeks', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: Colors.white.withValues(alpha: 0.7)))),
